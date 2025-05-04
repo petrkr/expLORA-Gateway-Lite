@@ -39,7 +39,8 @@ public:
     bool configMode;             // Režim konfigurace (AP mód)
     unsigned long lastWifiAttempt; // Čas posledního pokusu o připojení k WiFi
     LogLevel logLevel;           // Úroveň logování
-    
+    String timezone;            // Časové pásmo ve formátu Posix
+
     // Konstruktor
     ConfigManager(Logger& log, const char* file = CONFIG_FILE);
     
@@ -75,4 +76,7 @@ public:
     
     // Nastavení úrovně logování
     void setLogLevel(LogLevel level, bool saveConfig = true);
+
+    // Nastavení časového pásma
+    bool setTimezone(const String& newTimezone, bool saveConfig = true);
 };

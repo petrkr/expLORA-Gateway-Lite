@@ -19,8 +19,7 @@ struct SensorData {
     String name;               // Uživatelský název senzoru
     
     // Rozšířená konfigurace
-    String endpoint;           // Vlastní endpoint pro odesílání dat
-    String customParams;       // Vlastní parametry pro URL
+    String customUrl;         // Complete URL with placeholders
     
     // Stav senzoru
     unsigned long lastSeen;    // Čas posledního viděného paketu
@@ -33,6 +32,14 @@ struct SensorData {
     float ppm;                 // CO2 koncentrace (ppm) - SCD40
     float lux;                 // Intenzita osvětlení (lux) - VEML7700
     
+    // Přidáme nové proměnné pro METEO senzor
+    float windSpeed;          // Rychlost větru (m/s)
+    uint16_t windDirection;   // Směr větru (stupně)
+    float rainAmount;         // Množství srážek (mm)
+    float rainRate;           // Intenzita srážek (mm/h)
+    float dailyRainTotal;     // Denní úhrn srážek (mm) - resetuje se o půlnoci
+    unsigned long lastRainReset; // Časová značka posledního resetu denního úhrnu
+
     // Obecná data zařízení
     float batteryVoltage;      // Napětí baterie (V)
     int rssi;                  // Síla signálu (dBm)
@@ -43,8 +50,7 @@ struct SensorData {
         serialNumber(0),
         deviceKey(0),
         name(""),
-        endpoint(""),
-        customParams(""),
+        customUrl(""),
         lastSeen(0),
         configured(false),
         temperature(0.0f),
@@ -53,7 +59,13 @@ struct SensorData {
         ppm(0.0f),
         lux(0.0f),
         batteryVoltage(0.0f),
-        rssi(0)
+        rssi(0),
+        windSpeed(0.0f),
+        windDirection(0),
+        rainAmount(0.0f),
+        rainRate(0.0f),
+        dailyRainTotal(0.0f),
+        lastRainReset(0)
     {}
     
     // Pomocné metody pro ověření, zda senzor poskytuje určitý typ dat
@@ -75,6 +87,23 @@ struct SensorData {
     
     bool hasLux() const {
         return getSensorTypeInfo(deviceType).hasLux;
+    }
+
+    // Pomocné metody pro ověření, zda senzor poskytuje určitý typ dat
+    bool hasWindSpeed() const {
+        return getSensorTypeInfo(deviceType).hasWindSpeed;
+    }
+
+    bool hasWindDirection() const {
+        return getSensorTypeInfo(deviceType).hasWindDirection;
+    }
+
+    bool hasRainAmount() const {
+        return getSensorTypeInfo(deviceType).hasRainAmount;
+    }
+
+    bool hasRainRate() const {
+        return getSensorTypeInfo(deviceType).hasRainRate;
     }
     
     // Získání informací o typu senzoru
@@ -109,6 +138,23 @@ struct SensorData {
             
             if (hasLux()) {
                 json["lux"] = round(lux * 10) / 10.0;
+            }
+
+            if (hasWindSpeed()) {
+                json["windSpeed"] = round(windSpeed * 10) / 10.0;
+            }
+            
+            if (hasWindDirection()) {
+                json["windDirection"] = windDirection;
+            }
+            
+            if (hasRainAmount()) {
+                json["rainAmount"] = round(rainAmount * 100) / 100.0;
+                json["dailyRainTotal"] = round(dailyRainTotal * 100) / 100.0;
+            }
+            
+            if (hasRainRate()) {
+                json["rainRate"] = round(rainRate * 100) / 100.0;
             }
             
             json["batteryVoltage"] = round(batteryVoltage * 100) / 100.0;
@@ -157,6 +203,31 @@ struct SensorData {
         if (hasLux()) {
             if (!first) dataStr += ", ";
             dataStr += String(lux, 1) + " lux";
+            first = false;
+        }
+
+        if (hasWindSpeed()) {
+            if (!first) dataStr += ", ";
+            dataStr += String(windSpeed, 1) + " m/s";
+            first = false;
+        }
+        
+        if (hasWindDirection()) {
+            if (!first) dataStr += ", ";
+            dataStr += String(windDirection) + "°";
+            first = false;
+        }
+        
+        if (hasRainAmount()) {
+            if (!first) dataStr += ", ";
+            dataStr += String(rainAmount, 1) + " mm";
+            dataStr += " (denní úhrn: " + String(dailyRainTotal, 1) + " mm)";
+            first = false;
+        }
+        
+        if (hasRainRate()) {
+            if (!first) dataStr += ", ";
+            dataStr += String(rainRate, 1) + " mm/h";
             first = false;
         }
         

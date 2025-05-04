@@ -108,6 +108,7 @@ bool ConfigManager::loadFromFS() {
     wifiSSID = doc["ssid"].as<String>();
     wifiPassword = doc["password"].as<String>();
     configMode = doc["configMode"] | true;
+    timezone = doc["timezone"] | DEFAULT_TIMEZONE;
     
     logger.debug("Loaded config - SSID: " + wifiSSID + 
                 ", Password length: " + String(wifiPassword.length()) + 
@@ -137,6 +138,7 @@ bool ConfigManager::saveToFS() {
     doc["password"] = wifiPassword;
     doc["configMode"] = configMode;
     doc["logLevel"] = logger.levelToString(logLevel);
+    doc["timezone"] = timezone;
     
     // Serializace do souboru
     if (serializeJson(doc, file) == 0) {
@@ -164,6 +166,10 @@ bool ConfigManager::loadFromPreferences() {
         logLevel = logger.levelFromString(logLevelStr);
     }
     
+    if (preferences.isKey("timezone")) {
+        timezone = preferences.getString("timezone", DEFAULT_TIMEZONE);
+    }
+    
     // Ostatní hodnoty by měly být načteny z LittleFS, ale pokud je potřeba,
     // můžeme je načíst z Preferences jako záložní řešení
     if (wifiSSID.length() == 0 && preferences.isKey("ssid")) {
@@ -184,6 +190,7 @@ bool ConfigManager::saveToPreferences() {
     // Uložení úrovně logování
     String logLevelStr = logger.levelToString(logLevel);
     preferences.putString("logLevel", logLevelStr);
+    preferences.putString("timezone", timezone);
     
     // Uložení WiFi konfigurace (jako zálohu)
     preferences.putString("ssid", wifiSSID);
@@ -193,13 +200,30 @@ bool ConfigManager::saveToPreferences() {
     return true;
 }
 
+// Add a new method to set the timezone
+bool ConfigManager::setTimezone(const String& newTimezone, bool saveConfig) {
+    timezone = newTimezone;
+    
+    // Configure the time with new timezone
+    configTime(0, 0, NTP_SERVER); // First set to UTC
+    setenv("TZ", timezone.c_str(), 1); // Set the TZ environment variable
+    tzset(); // Apply the time zone
+    
+    if (saveConfig) {
+        return save();
+    }
+    
+    return true;
+}
+
 // Resetování konfigurace na výchozí hodnoty
 void ConfigManager::resetToDefaults() {
-    wifiSSID = "";
+   wifiSSID = "";
     wifiPassword = "";
     configMode = true;
     lastWifiAttempt = 0;
     logLevel = LogLevel::INFO;
+    timezone = DEFAULT_TIMEZONE;
 }
 
 // Získání verze firmwaru
@@ -224,7 +248,7 @@ String ConfigManager::getDeviceName() const {
     uint8_t mac[6];
     WiFi.macAddress(mac);
     
-    String deviceName = "SVERIO-GW-";
+    String deviceName = "expLORA-GW-";
     for (int i = 0; i < 6; i++) {
         if (mac[i] < 16) deviceName += "0";
         deviceName += String(mac[i], HEX);

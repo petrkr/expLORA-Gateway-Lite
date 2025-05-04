@@ -1,7 +1,7 @@
 #pragma once
 
 // Verze firmwaru
-#define FIRMWARE_VERSION "1.0.0"
+#define FIRMWARE_VERSION "1.0.2"
 
 // Konfigurace hardwaru
 // Definice pinů pro RFM95W
@@ -71,8 +71,8 @@
 
 // NTP konfigurace
 #define NTP_SERVER "pool.ntp.org"
-#define GMT_OFFSET_SEC 0       // GMT+0
-#define DAYLIGHT_OFFSET_SEC 3600 // Letní čas
+#define DEFAULT_TIMEZONE "CET-1CEST,M3.5.0,M10.5.0/3"  // Central European Time with auto DST
+
 
 // CORS hlavičky pro API
 #define CORS_HEADER_NAME "Access-Control-Allow-Origin"
@@ -86,7 +86,8 @@
 #define SENSOR_TYPE_UNKNOWN 0x00
 #define SENSOR_TYPE_BME280 0x01    // Teplota, vlhkost, tlak
 #define SENSOR_TYPE_SCD40 0x02     // Teplota, vlhkost, CO2
-#define SENSOR_TYPE_VEML7700 0x03  // Světelný senzor (LUX)
+#define SENSOR_TYPE_METEO 0x03  // Meteorologická stanice
+#define SENSOR_TYPE_VEML7700 0x04  // Světelný senzor (LUX)
 // Přidejte další typy senzorů zde...
 
 // Konfigurace PSRAM pro web server

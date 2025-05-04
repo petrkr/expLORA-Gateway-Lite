@@ -6,27 +6,32 @@
 #include "../config.h"
 
 // Inicializace statických proměnných
-char* HTMLGenerator::htmlBuffer = nullptr;
+char *HTMLGenerator::htmlBuffer = nullptr;
 size_t HTMLGenerator::htmlBufferSize = WEB_BUFFER_SIZE;
 bool HTMLGenerator::usePSRAM = false;
 
 // Inicializace generátoru
 // Inicializace generátoru
-bool HTMLGenerator::init(bool usePsram, size_t bufferSize) {
+bool HTMLGenerator::init(bool usePsram, size_t bufferSize)
+{
     // Pokud už je buffer inicializován, nejprve ho uvolníme
-    if (htmlBuffer != nullptr) {
+    if (htmlBuffer != nullptr)
+    {
         deinit();
     }
-    
+
     htmlBufferSize = bufferSize;
-    
+
 #ifdef BOARD_HAS_PSRAM
     usePSRAM = true;
-    htmlBuffer = (char*)heap_caps_malloc(htmlBufferSize, MALLOC_CAP_SPIRAM);
-    
-    if (htmlBuffer != nullptr) {
+    htmlBuffer = (char *)heap_caps_malloc(htmlBufferSize, MALLOC_CAP_SPIRAM);
+
+    if (htmlBuffer != nullptr)
+    {
         Serial.printf("HTMLGenerator: Allocated %u bytes in PSRAM for HTML content\n", htmlBufferSize);
-    } else {
+    }
+    else
+    {
         // Fallback na běžnou RAM
         usePSRAM = false;
         htmlBuffer = new char[htmlBufferSize];
@@ -35,25 +40,31 @@ bool HTMLGenerator::init(bool usePsram, size_t bufferSize) {
 #else
     usePSRAM = false;
     htmlBuffer = new char[htmlBufferSize];
-    Serial.printf("HTMLGenerator: Using %u bytes in RAM for HTML content\n", htmlBufferSize);    
+    Serial.printf("HTMLGenerator: Using %u bytes in RAM for HTML content\n", htmlBufferSize);
 #endif
-    
+
     // Kontrola, zda se povedla alokace paměti
-    if (htmlBuffer == nullptr) {
+    if (htmlBuffer == nullptr)
+    {
         Serial.println("HTMLGenerator: Failed to allocate memory for HTML buffer");
         return false;
     }
-    
+
     return true;
 }
 
 // Uvolnění zdrojů
-void HTMLGenerator::deinit() {
-    if (htmlBuffer != nullptr) {
+void HTMLGenerator::deinit()
+{
+    if (htmlBuffer != nullptr)
+    {
 #ifdef BOARD_HAS_PSRAM
-        if (usePSRAM) {
+        if (usePSRAM)
+        {
             heap_caps_free(htmlBuffer);
-        } else {
+        }
+        else
+        {
 #endif
             delete[] htmlBuffer;
 #ifdef BOARD_HAS_PSRAM
@@ -65,65 +76,71 @@ void HTMLGenerator::deinit() {
 
 // Přidání HTML úvodního kódu
 // Update HTMLGenerator::addHtmlHeader in HTMLGenerator.cpp
-void HTMLGenerator::addHtmlHeader(String& html, const String& title, bool isAPMode = false) {
+void HTMLGenerator::addHtmlHeader(String &html, const String &title, bool isAPMode = false)
+{
     html += "<!DOCTYPE html><html><head>";
     html += "<meta charset='UTF-8'>";
-    html += "<title>" + title + " - SVERIO Gateway</title>";
+    html += "<title>" + title + " - expLORA Gateway Lite</title>";
     html += "<meta name='viewport' content='width=device-width, initial-scale=1'>";
-    
+
     // Add CSS styles
     addStyles(html);
-    
+
     html += "</head><body>";
-    html += "<header><h1>SVERIO Gateway</h1><h2>" + title + "</h2></header>";
-    
+    html += "<header><h1>expLORA Gateway Lite</h1><h2>" + title + "</h2></header>";
+
     // Add navigation only if not in AP mode
-    if (!isAPMode) {
+    if (!isAPMode)
+    {
         addNavigation(html, title);
-    } else {
+    }
+    else
+    {
         // In AP mode, just add the container div without navigation
         html += "<div class='container'>";
     }
 }
 
 // Přidání HTML koncového kódu
-void HTMLGenerator::addHtmlFooter(String& html) {
+void HTMLGenerator::addHtmlFooter(String &html)
+{
     html += "<footer>";
-    html += "<p>SVERIO Gateway v" + String(FIRMWARE_VERSION) + " &copy; 2025</p>";
+    html += "<p>expLORA Gateway Lite v" + String(FIRMWARE_VERSION) + " &copy; 2025</p>";
     html += "</footer>";
-    
+
     // Přidání JavaScriptu
     addJavaScript(html);
-    
+
     html += "</body></html>";
 }
 
 // Přidání CSS pro stránky
-void HTMLGenerator::addStyles(String& html) {
+void HTMLGenerator::addStyles(String &html)
+{
     html += "<style>";
     html += "* { box-sizing: border-box; }";
     html += "body { font-family: Arial, sans-serif; margin: 0; padding: 0; line-height: 1.6; }";
     html += "header { background: #0066cc; color: white; padding: 20px; text-align: center; }";
     html += "header h1 { margin: 0; }";
     html += "header h2 { margin: 5px 0 0 0; font-weight: normal; }";
-    
+
     // Navigace
     html += "nav { background: #333; overflow: hidden; }";
     html += "nav a { float: left; display: block; color: white; text-align: center; padding: 14px 16px; text-decoration: none; }";
     html += "nav a:hover { background: #0066cc; }";
     html += "nav a.active { background: #0066cc; }";
     html += "nav .icon { display: none; }";
-    
+
     // Karty
     html += ".container { padding: 20px; }";
     html += ".card { background: white; border-radius: 5px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }";
-    
+
     // Tabulky
     html += "table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }";
     html += "th, td { text-align: left; padding: 12px; border-bottom: 1px solid #ddd; }";
     html += "th { background-color: #f2f2f2; }";
     html += "tr:hover { background-color: #f5f5f5; }";
-    
+
     // Formuláře
     html += "form { margin-top: 20px; }";
     html += "label { display: block; margin-bottom: 5px; font-weight: bold; }";
@@ -135,7 +152,7 @@ void HTMLGenerator::addStyles(String& html) {
     html += "input[type='submit']:hover, button:hover, .btn:hover { background: #0055aa; }";
     html += ".btn-delete { background: #cc0000; }";
     html += ".btn-delete:hover { background: #aa0000; }";
-    
+
     // Responzivní design
     html += "@media screen and (max-width: 600px) {";
     html += "  nav a:not(:first-child) { display: none; }";
@@ -144,7 +161,7 @@ void HTMLGenerator::addStyles(String& html) {
     html += "  nav.responsive a.icon { position: absolute; right: 0; top: 0; }";
     html += "  nav.responsive a { float: none; display: block; text-align: left; }";
     html += "}";
-    
+
     // Speciální styly pro logy
     html += ".log-container { background: #f8f8f8; padding: 10px; border-radius: 4px; max-height: 70vh; overflow-y: auto; }";
     html += ".log-entry { padding: 5px; border-bottom: 1px solid #ddd; font-family: monospace; white-space: pre-wrap; }";
@@ -153,17 +170,18 @@ void HTMLGenerator::addStyles(String& html) {
     html += ".log-info { color: #2196F3; }";
     html += ".log-debug { color: #4CAF50; }";
     html += ".log-verbose { color: #9E9E9E; }";
-    
+
     // Patička
     html += "footer { background: #f2f2f2; padding: 10px; text-align: center; font-size: 12px; color: #666; }";
-    
+
     html += "</style>";
 }
 
 // Přidání JavaScript pro interaktivní prvky
-void HTMLGenerator::addJavaScript(String& html) {
+void HTMLGenerator::addJavaScript(String &html)
+{
     html += "<script>";
-    
+
     // Responzivní menu
     html += "function toggleMenu() {";
     html += "  var x = document.getElementsByTagName('nav')[0];";
@@ -173,20 +191,21 @@ void HTMLGenerator::addJavaScript(String& html) {
     html += "    x.className = '';";
     html += "  }";
     html += "}";
-    
+
     // Automatické obnovení stránky
     html += "function startAutoRefresh(interval) {";
     html += "  setTimeout(function(){ location.reload(); }, interval);";
     html += "}";
-    
-    // WebSocket pro real-time aktualizace 
+
+    // WebSocket pro real-time aktualizace
     // Implementace bude přidána později
-    
+
     html += "</script>";
 }
 
 // Přidání navigace
-void HTMLGenerator::addNavigation(String& html, const String& activePage) {
+void HTMLGenerator::addNavigation(String &html, const String &activePage)
+{
     html += "<nav>";
     html += "<a href='/' class='" + String(activePage == "Home" ? "active" : "") + "'>Home</a>";
     html += "<a href='/config' class='" + String(activePage == "Configuration" ? "active" : "") + "'>WiFi Setup</a>";
@@ -196,22 +215,22 @@ void HTMLGenerator::addNavigation(String& html, const String& activePage) {
     html += "<a href='/reboot' class='" + String(activePage == "Reboot" ? "active" : "") + "'>Reboot</a>";
     html += "<a href='javascript:void(0);' class='icon' onclick='toggleMenu()'>&#9776;</a>";
     html += "</nav>";
-    
+
     html += "<div class='container'>";
 }
 
 // Generování domovské stránky
 // String HTMLGenerator::generateHomePage(const std::vector<SensorData>& sensors) {
 //     String html;
-    
+
 //     // Přidání hlavičky
 //     addHtmlHeader(html, "Home");
-    
+
 //     // Stavová karta
 //     html += "<div class='card'>";
 //     html += "<h2>System Status</h2>";
 //     html += "<p><strong>Mode:</strong> " + String(WiFi.status() == WL_CONNECTED ? "Client" : "Access Point") + "</p>";
-    
+
 //     if (WiFi.status() == WL_CONNECTED) {
 //         html += "<p><strong>WiFi:</strong> Connected to " + WiFi.SSID() + "</p>";
 //         html += "<p><strong>IP:</strong> " + WiFi.localIP().toString() + "</p>";
@@ -221,7 +240,7 @@ void HTMLGenerator::addNavigation(String& html, const String& activePage) {
 //             html += "<p><strong>AP IP:</strong> " + WiFi.softAPIP().toString() + "</p>";
 //         }
 //     }
-    
+
 //     // Aktuální čas
 //     struct tm timeinfo;
 //     if (getLocalTime(&timeinfo)) {
@@ -231,9 +250,9 @@ void HTMLGenerator::addNavigation(String& html, const String& activePage) {
 //     } else {
 //         html += "<p><strong>Time:</strong> Not set</p>";
 //     }
-    
+
 //     html += "<p><strong>Uptime:</strong> " + String(millis() / 1000) + " seconds</p>";
-    
+
 //     // Informace o paměti
 //     html += "<p><strong>Free Heap:</strong> " + String(ESP.getFreeHeap()) + " bytes</p>";
 //     #ifdef BOARD_HAS_PSRAM
@@ -241,13 +260,13 @@ void HTMLGenerator::addNavigation(String& html, const String& activePage) {
 //         html += "<p><strong>Free PSRAM:</strong> " + String(ESP.getFreePsram()) + " bytes</p>";
 //     }
 //     #endif
-    
+
 //     html += "</div>";
-    
+
 //     // Aktivní senzory
 //     html += "<div class='card'>";
 //     html += "<h2>Active Sensors</h2>";
-    
+
 //     if (sensors.empty()) {
 //         html += "<p>No sensors configured. Please add sensors from the Sensors page.</p>";
 //     } else {
@@ -261,7 +280,7 @@ void HTMLGenerator::addNavigation(String& html, const String& activePage) {
 //             // Fallback pokud není k dispozici buffer
 //             html += "<table>";
 //             html += "<tr><th>Name</th><th>Type</th><th>Last Seen</th><th>Data</th></tr>";
-            
+
 //             for (const auto& sensor : sensors) {
 //                 if (sensor.configured) {
 //                     html += "<tr>";
@@ -272,135 +291,149 @@ void HTMLGenerator::addNavigation(String& html, const String& activePage) {
 //                     html += "</tr>";
 //                 }
 //             }
-            
+
 //             html += "</table>";
 //         }
 //     }
-    
+
 //     html += "</div>";
-    
+
 //     // Auto-refresh
 //     html += "<script>startAutoRefresh(30000);</script>";
-    
+
 //     // Přidání patičky
 //     addHtmlFooter(html);
-    
+
 //     return html;
 // }
 
 // In HTMLGenerator.cpp, modify the generateHomePage method
-String HTMLGenerator::generateHomePage(const std::vector<SensorData>& sensors) {
+String HTMLGenerator::generateHomePage(const std::vector<SensorData> &sensors)
+{
     String html;
-    
+
     // Add header with reduced content
     addHtmlHeader(html, "Home");
-    
+
     // Status card
     html += "<div class='card'>";
     html += "<h2>System Status</h2>";
-    
+
     html += "<p><strong>Mode:</strong> " + String(WiFi.status() == WL_CONNECTED ? "Client" : "Access Point") + "</p>";
-    
-    if (WiFi.status() == WL_CONNECTED) {
+
+    if (WiFi.status() == WL_CONNECTED)
+    {
         html += "<p><strong>WiFi:</strong> Connected to " + WiFi.SSID() + "</p>";
         html += "<p><strong>IP:</strong> " + WiFi.localIP().toString() + "</p>";
-    } else {
+    }
+    else
+    {
         html += "<p><strong>WiFi:</strong> Disconnected</p>";
-        if (WiFi.getMode() == WIFI_AP) {
+        if (WiFi.getMode() == WIFI_AP)
+        {
             html += "<p><strong>AP IP:</strong> " + WiFi.softAPIP().toString() + "</p>";
         }
     }
-    
+
     // Aktuální čas
     struct tm timeinfo;
-    if (getLocalTime(&timeinfo)) {
+    if (getLocalTime(&timeinfo))
+    {
         char timeStr[64];
         strftime(timeStr, sizeof(timeStr), "%Y-%m-%d %H:%M:%S", &timeinfo);
         html += "<p><strong>Time:</strong> " + String(timeStr) + "</p>";
-    } else {
+    }
+    else
+    {
         html += "<p><strong>Time:</strong> Not set</p>";
     }
-    
+
     html += "<p><strong>Uptime:</strong> " + String(millis() / 1000) + " seconds</p>";
-    
+
     html += "</div>";
-    
+
     // Active sensors - optimize by checking vector size first
-    if (!sensors.empty()) {
+    if (!sensors.empty())
+    {
         html += "<div class='card'>";
         html += "<h2>Active Sensors</h2>";
-        
+
         // Generate table with minimal content
         html += "<table>";
         html += "<tr><th>Name</th><th>Type</th><th>Last Seen</th><th>Data</th></tr>";
-        
-        for (const auto& sensor : sensors) {
-            if (sensor.configured) {
+
+        for (const auto &sensor : sensors)
+        {
+            if (sensor.configured)
+            {
                 html += "<tr>";
                 html += "<td>" + sensor.name + "</td>";
                 html += "<td>" + sensorTypeToString(sensor.deviceType) + "</td>";
                 html += "<td>" + sensor.getLastSeenString() + "</td>";
-                
+
                 // Add sensor data - use the getDataString() method
                 html += "<td>" + sensor.getDataString() + "</td>";
-                
+
                 html += "</tr>";
-                
+
                 // Yield to other tasks periodically during table generation
-                if (&sensor != &sensors.back()) {
+                if (&sensor != &sensors.back())
+                {
                     yield();
                 }
             }
         }
-        
+
         html += "</table>";
         html += "</div>";
     }
-    
+
     // Auto-refresh with longer interval in AP mode
     html += "<script>startAutoRefresh(60000);</script>"; // 60 seconds instead of 30
-    
+
     // Add footer
     addHtmlFooter(html);
-    
+
     return html;
 }
 
-
 // Generování tabulky senzorů (optimalizovaná verze pro buffer)
-void HTMLGenerator::generateSensorTable(char* buffer, size_t& maxLen, const std::vector<SensorData>& sensors) {
+void HTMLGenerator::generateSensorTable(char *buffer, size_t &maxLen, const std::vector<SensorData> &sensors)
+{
     size_t contentLen = 0;
-    
+
     // Začátek tabulky
     contentLen += snprintf(buffer + contentLen, maxLen - contentLen,
-                          "<table>"
-                          "<tr><th>Name</th><th>Type</th><th>Serial Number</th><th>Last Seen</th><th>Sensor Data</th></tr>");
-    
+                           "<table>"
+                           "<tr><th>Name</th><th>Type</th><th>Serial Number</th><th>Last Seen</th><th>Sensor Data</th></tr>");
+
     // Průchod všemi senzory
-    for (const auto& sensor : sensors) {
-        if (sensor.configured) {
+    for (const auto &sensor : sensors)
+    {
+        if (sensor.configured)
+        {
             contentLen += snprintf(buffer + contentLen, maxLen - contentLen,
-                                  "<tr>"
-                                  "<td>%s</td>"
-                                  "<td>%s</td>"
-                                  "<td>0x%X</td>",
-                                  sensor.name.c_str(),
-                                  sensor.getTypeInfo().name,
-                                  sensor.serialNumber);
-            
+                                   "<tr>"
+                                   "<td>%s</td>"
+                                   "<td>%s</td>"
+                                   "<td>0x%X</td>",
+                                   sensor.name.c_str(),
+                                   sensor.getTypeInfo().name,
+                                   sensor.serialNumber);
+
             // Last Seen
             contentLen += snprintf(buffer + contentLen, maxLen - contentLen,
-                                  "<td>%s</td>",
-                                  sensor.getLastSeenString().c_str());
-            
+                                   "<td>%s</td>",
+                                   sensor.getLastSeenString().c_str());
+
             // Sensor Data
             contentLen += snprintf(buffer + contentLen, maxLen - contentLen,
-                                  "<td>%s</td>"
-                                  "</tr>",
-                                  sensor.getDataString().c_str());
+                                   "<td>%s</td>"
+                                   "</tr>",
+                                   sensor.getDataString().c_str());
         }
     }
-    
+
     // Konec tabulky
     contentLen += snprintf(buffer + contentLen, maxLen - contentLen, "</table>");
 }
@@ -408,29 +441,34 @@ void HTMLGenerator::generateSensorTable(char* buffer, size_t& maxLen, const std:
 // Generování stránky konfigurace
 // Modify HTMLGenerator::generateConfigPage to use more reliable AJAX for WiFi scanning
 // Update HTMLGenerator::generateConfigPage in HTMLGenerator.cpp
-String HTMLGenerator::generateConfigPage(const String& ssid, const String& password, bool configMode, const String& ip) {
+String HTMLGenerator::generateConfigPage(const String &ssid, const String &password, bool configMode, const String &ip, const String &timezone)
+{
     String html;
-    
+
     // Add header - pass configMode to suppress navigation in AP mode
     addHtmlHeader(html, "Configuration", configMode);
-    
+
     // Current status
     html += "<div class='card'>";
     html += "<h2>Current Status</h2>";
-    if (configMode) {
+    if (configMode)
+    {
         html += "<p><strong>Mode:</strong> Access Point</p>";
         html += "<p><strong>AP Name:</strong> " + WiFi.softAPSSID() + "</p>";
         html += "<p><strong>AP IP:</strong> " + WiFi.softAPIP().toString() + "</p>";
-    } else {
+    }
+    else
+    {
         html += "<p><strong>Mode:</strong> Client</p>";
         html += "<p><strong>SSID:</strong> " + ssid + "</p>";
         html += "<p><strong>Status:</strong> " + String(WiFi.status() == WL_CONNECTED ? "Connected" : "Disconnected") + "</p>";
-        if (WiFi.status() == WL_CONNECTED) {
+        if (WiFi.status() == WL_CONNECTED)
+        {
             html += "<p><strong>IP:</strong> " + WiFi.localIP().toString() + "</p>";
         }
     }
     html += "</div>";
-    
+
     // WiFi configuration form
     html += "<div class='card'>";
     html += "<h2>WiFi Settings</h2>";
@@ -439,35 +477,64 @@ String HTMLGenerator::generateConfigPage(const String& ssid, const String& passw
     html += "<input type='text' id='ssid' name='ssid' value='" + ssid + "' required>";
     html += "<label for='password'>Password:</label>";
     html += "<input type='password' id='password' name='password' value='" + password + "'>";
+    html += "<label for='timezone'>Timezone:</label>";
+    html += "<select id='timezone' name='timezone'>";
+
+    html += "<option value='GMT0'";
+    if (timezone == "GMT0") html += " selected";
+    html += ">GMT/UTC (00:00)</option>";
+     
+    html += "<option value='WET0WEST,M3.5.0/1,M10.5.0'";
+    if (timezone == "WET0WEST,M3.5.0/1,M10.5.0") html += " selected";
+    html += ">Western European (WET/WEST)</option>";
+     
+    html += "<option value='CET-1CEST,M3.5.0,M10.5.0/3'";
+    if (timezone == "CET-1CEST,M3.5.0,M10.5.0/3") html += " selected";
+    html += ">Central European (CET/CEST)</option>";
+     
+    html += "<option value='EET-2EEST,M3.5.0/3,M10.5.0/4'";
+    if (timezone == "EET-2EEST,M3.5.0/3,M10.5.0/4") html += " selected";
+    html += ">Eastern European (EET/EEST)</option>";
+     
+    html += "<option value='MSK-3'";
+    if (timezone == "MSK-3") html += " selected";
+    html += ">Moscow Time (MSK)</option>";
+     
     html += "<input type='submit' value='Save and Restart'>";
     html += "</form>";
     html += "</div>";
-    
+
     // Add footer
     addHtmlFooter(html);
-    
+
     return html;
 }
 
 // Generování stránky se seznamem senzorů
-String HTMLGenerator::generateSensorsPage(const std::vector<SensorData>& sensors) {
+String HTMLGenerator::generateSensorsPage(const std::vector<SensorData> &sensors)
+{
     String html;
     // Přidání hlavičky
     addHtmlHeader(html, "Sensors");
-    
+
     // Seznam senzorů
     html += "<div class='card'>";
     html += "<h2>Configured Sensors</h2>";
-    
-    if (sensors.empty()) {
+
+    if (sensors.empty())
+    {
         html += "<p>No sensors configured yet.</p>";
-    } else {
+    }
+    else
+    {
         html += "<table>";
         html += "<tr><th>Name</th><th>Type</th><th>Serial Number</th><th>Last Seen</th><th>Actions</th></tr>";
-        
-        for (size_t i = 0; i < sensors.size(); i++) {
-            const auto& sensor = sensors[i];
-            if (sensor.configured) {
+
+        for (size_t i = 0; i < sensors.size(); i++)
+        {
+            const auto &sensor = sensors[i];
+            if (sensor.configured)
+            {
                 html += "<tr>";
                 html += "<td>" + sensor.name + "</td>";
                 html += "<td>" + sensorTypeToString(sensor.deviceType) + "</td>";
@@ -480,203 +547,364 @@ String HTMLGenerator::generateSensorsPage(const std::vector<SensorData>& sensors
                 html += "</tr>";
             }
         }
-        
+
         html += "</table>";
     }
-    
+
     html += "<p><a href='/sensors/add' class='btn'>Add New Sensor</a></p>";
     html += "</div>";
-    
+
     // Přidání patičky
     addHtmlFooter(html);
-    
+
     return html;
 }
 
 // Generování stránky pro přidání senzoru
-String HTMLGenerator::generateSensorAddPage() {
+String HTMLGenerator::generateSensorAddPage()
+{
     String html;
-    
+
     // Přidání hlavičky
     addHtmlHeader(html, "Add Sensor");
-    
+
     // Formulář pro přidání senzoru
     html += "<div class='card'>";
     html += "<h2>Add New Sensor</h2>";
     html += "<form method='post' action='/sensors/add'>";
-    
+
     // Jméno senzoru
     html += "<label for='name'>Sensor Name:</label>";
     html += "<input type='text' id='name' name='name' required>";
-    
+
     // Typ senzoru
     html += "<label for='deviceType'>Device Type:</label>";
     html += "<select id='deviceType' name='deviceType'>";
-    
+
     // Dynamicky generujeme typy senzorů z definice
-    for (const auto& type : SENSOR_TYPE_DEFINITIONS) {
-        if (type.type != SensorType::UNKNOWN) {
-            html += "<option value='" + String(static_cast<uint8_t>(type.type)) + "'>" + 
-                    String(type.name) + " (0x" + String(static_cast<uint8_t>(type.type), HEX) + ")";
-            
+    for (const auto &type : SENSOR_TYPE_DEFINITIONS)
+    {
+        if (type.type != SensorType::UNKNOWN)
+        {
+            html += "<option value='" + String(static_cast<uint8_t>(type.type)) + "'>" +
+                    String(type.name);
+
             // Přidání informace o schopnostech senzoru
             html += " - ";
             bool first = true;
-            
-            if (type.hasTemperature) {
+
+            if (type.hasTemperature)
+            {
                 html += "Temperature";
                 first = false;
             }
-            
-            if (type.hasHumidity) {
+
+            if (type.hasHumidity)
+            {
                 html += (first ? "" : ", ") + String("Humidity");
                 first = false;
             }
-            
-            if (type.hasPressure) {
+
+            if (type.hasPressure)
+            {
                 html += (first ? "" : ", ") + String("Pressure");
                 first = false;
             }
-            
-            if (type.hasPPM) {
+
+            if (type.hasPPM)
+            {
                 html += (first ? "" : ", ") + String("CO2");
                 first = false;
             }
-            
-            if (type.hasLux) {
+
+            if (type.hasLux)
+            {
                 html += (first ? "" : ", ") + String("Light");
             }
-            
+
+
+            if (type.hasRainAmount)
+            {
+                html += (first ? "" : ", ") + String("Rain");
+            }
+            if (type.hasWindSpeed)
+            {
+                html += (first ? "" : ", ") + String("Wind");
+            }
+
             html += "</option>";
         }
     }
-    
+
     html += "</select>";
-    
+
     // Sériové číslo
-    html += "<label for='serialNumber'>Serial Number (Hex):</label>";
-    html += "<input type='text' id='serialNumber' name='serialNumber' placeholder='e.g. DEADBEEF' required>";
-    
+    html += "<label for='serialNumber'>Serial Number:</label>";
+    html += "<input type='text' id='serialNumber' name='serialNumber' placeholder='e.g. 1234567A' required>";
+
     // Klíč zařízení
-    html += "<label for='deviceKey'>Device Key (Hex):</label>";
+    html += "<label for='deviceKey'>Device Key:</label>";
     html += "<input type='text' id='deviceKey' name='deviceKey' placeholder='e.g. DEADBEEF' required>";
-    
-    // Custom endpoint
-    html += "<label for='endpoint'>Custom Endpoint (Optional):</label>";
-    html += "<input type='text' id='endpoint' name='endpoint' placeholder='http://example.com/api'>";
-    
-    // Custom parametry
-    html += "<label for='customParams'>Custom Parameters (Optional):</label>";
-    html += "<div id='paramHelp' style='margin-bottom: 5px; font-size: 0.9em;'>Available placeholders: ";
-    html += "<span id='tempPlaceholder'>*TEMP* (Temperature), </span>";
-    html += "<span id='humPlaceholder'>*HUM* (Humidity), </span>";
-    html += "<span id='pressPlaceholder'>*PRESS* (Pressure), </span>";
-    html += "<span id='ppmPlaceholder'>*PPM* (CO2), </span>";
-    html += "<span id='luxPlaceholder'>*LUX* (Light), </span>";
-    html += "<span>*BAT* (Battery), *RSSI* (Signal), *SN* (Serial Number), *TYPE* (Device Type)</span>";
-    html += "</div>";
-    
-    html += "<textarea id='customParams' name='customParams' style='height: 100px;' placeholder='temp=*TEMP*&hum=*HUM*&press=*PRESS*'></textarea>";
-    
+
+    // New code with a single field
+    html += "<label for='customUrl'>Custom URL with Placeholders (Optional):</label>";
+    html += "<div id='urlHelp' style='margin-bottom: 10px; font-size: 0.9em;'>";
+    html += "<p>Available placeholders:</p>";
+    html += "<style>";
+    html += ".placeholder-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 15px; }";
+    html += ".placeholder-item { background: #f5f5f5; padding: 8px; border-radius: 4px; }";
+    html += ".placeholder-item code { background: #e0e0e0; padding: 2px 4px; border-radius: 3px; font-family: monospace; color: #0066cc; }";
+    html += "</style>";
+    html += "<div class='placeholder-grid' style='display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px;'>";
+    // Environment placeholders
+    html += "<div id='tempPlaceholder' class='placeholder-item'>Temperature <code>*TEMP*</code></div>";
+    html += "<div id='humPlaceholder' class='placeholder-item'>Humidity <code>*HUM*</code></div>";
+    html += "<div id='pressPlaceholder' class='placeholder-item'>Pressure <code>*PRESS*</code></div>";
+    html += "<div id='ppmPlaceholder' class='placeholder-item'>CO2 <code>*PPM*</code></div>";
+    html += "<div id='luxPlaceholder' class='placeholder-item'>Light <code>*LUX*</code></div>";
+    // Weather specific
+    html += "<div id='windSpeedPlaceholder' class='placeholder-item'>Wind Speed <code>*WIND_SPEED*</code></div>";
+    html += "<div id='windDirPlaceholder' class='placeholder-item'>Wind Direction <code>*WIND_DIR*</code></div>";
+    html += "<div id='rainPlaceholder' class='placeholder-item'>Rain Amount <code>*RAIN*</code></div>";
+    html += "<div id='dailyRainPlaceholder' class='placeholder-item'>Rain since midnight <code>*DAILY_RAIN*</code></div>";
+    html += "<div id='rainRatePlaceholder' class='placeholder-item'>Rain Rate <code>*RAIN_RATE*</code></div>";
+    // Device info
+    html += "<div class='placeholder-item'>Battery <code>*BAT*</code></div>";
+    html += "<div class='placeholder-item'>Signal <code>*RSSI*</code></div>";
+    html += "<div class='placeholder-item'>Serial Number <code>*SN*</code></div>";
+    html += "<div class='placeholder-item'>Device Type <code>*TYPE*</code></div>";
+    html += "</div>"; // end of grid
+    html += "</div>"; // end of urlHelp
+    html += "<input type='text' id='customUrl' name='customUrl' placeholder='https://example.com/api?temp=*TEMP*&hum=*HUM*'>";
+
     // JavaScript pro aktualizaci placeholderů podle typu senzoru
     html += "<script>";
-    html += "document.getElementById('deviceType').addEventListener('change', function() {";
-    html += "  var type = parseInt(this.value);";
-    html += "  document.getElementById('tempPlaceholder').style.display = [1, 2].includes(type) ? 'inline' : 'none';";
-    html += "  document.getElementById('humPlaceholder').style.display = [1, 2].includes(type) ? 'inline' : 'none';";
-    html += "  document.getElementById('pressPlaceholder').style.display = type == 1 ? 'inline' : 'none';";
-    html += "  document.getElementById('ppmPlaceholder').style.display = type == 2 ? 'inline' : 'none';";
-    html += "  document.getElementById('luxPlaceholder').style.display = type == 3 ? 'inline' : 'none';";
+    html += "document.addEventListener('DOMContentLoaded', function() {";
+    html += "  var deviceTypeSelect = document.getElementById('deviceType');";
+    html += "  function updatePlaceholderVisibility() {";
+    html += "    var type = parseInt(deviceTypeSelect.value);";
+    html += "    console.log('Selected device type:', type);"; // Debugging
+
+    // Definice typů zařízení pro jednotlivé placeholdery
+    html += "    var tempHumDevices = [1, 2, 3];";
+    html += "    var pressureDevices = [1, 3];";
+    html += "    var co2Devices = [2];";
+    html += "    var luxDevices = [4];";
+    html += "    var weatherDevices = [3];";
+
+    // Aktualizace zobrazení
+    html += "    document.getElementById('tempPlaceholder').style.display = tempHumDevices.includes(type) ? 'block' : 'none';";
+    html += "    document.getElementById('humPlaceholder').style.display = tempHumDevices.includes(type) ? 'block' : 'none';";
+    html += "    document.getElementById('pressPlaceholder').style.display = pressureDevices.includes(type) ? 'block' : 'none';";
+    html += "    document.getElementById('ppmPlaceholder').style.display = co2Devices.includes(type) ? 'block' : 'none';";
+    html += "    document.getElementById('luxPlaceholder').style.display = luxDevices.includes(type) ? 'block' : 'none';";
+    html += "    document.getElementById('windSpeedPlaceholder').style.display = weatherDevices.includes(type) ? 'block' : 'none';";
+    html += "    document.getElementById('windDirPlaceholder').style.display = weatherDevices.includes(type) ? 'block' : 'none';";
+    html += "    document.getElementById('rainPlaceholder').style.display = weatherDevices.includes(type) ? 'block' : 'none';";
+    html += "    document.getElementById('dailyRainPlaceholder').style.display = weatherDevices.includes(type) ? 'block' : 'none';";
+    html += "    document.getElementById('rainRatePlaceholder').style.display = weatherDevices.includes(type) ? 'block' : 'none';";
+    html += "  }";
+
+    // Spustíme funkci hned po načtení stránky
+    html += "  updatePlaceholderVisibility();";
+
+    // A také při změně výběru
+    html += "  deviceTypeSelect.addEventListener('change', updatePlaceholderVisibility);";
     html += "});";
     html += "</script>";
-    
+
     // Tlačítka
     html += "<input type='submit' value='Add Sensor'>";
     html += "<a href='/sensors' class='btn' style='background: #999;'>Cancel</a>";
     html += "</form>";
     html += "</div>";
-    
+
     // Přidání patičky
     addHtmlFooter(html);
-    
+
     return html;
 }
 
 // Generování stránky pro úpravu senzoru
-String HTMLGenerator::generateSensorEditPage(const SensorData& sensor, int index) {
+String HTMLGenerator::generateSensorEditPage(const SensorData &sensor, int index)
+{
     String html;
-    
+
     // Přidání hlavičky
     addHtmlHeader(html, "Edit Sensor");
-    
+
     // Formulář pro úpravu senzoru
     html += "<div class='card'>";
     html += "<h2>Edit Sensor</h2>";
     html += "<form method='post' action='/sensors/update'>";
-    
+
     // Skrytý index
     html += "<input type='hidden' name='index' value='" + String(index) + "'>";
-    
+
     // Jméno senzoru
     html += "<label for='name'>Sensor Name:</label>";
     html += "<input type='text' id='name' name='name' value='" + sensor.name + "' required>";
-    
+
     // Typ senzoru
     html += "<label for='deviceType'>Device Type:</label>";
     html += "<select id='deviceType' name='deviceType'>";
-    
+
     // Dynamicky generujeme typy senzorů z definice
-    for (const auto& type : SENSOR_TYPE_DEFINITIONS) {
-        if (type.type != SensorType::UNKNOWN) {
-            html += "<option value='" + String(static_cast<uint8_t>(type.type)) + "'";
-            if (type.type == sensor.deviceType) {
-                html += " selected";
+    for (const auto &type : SENSOR_TYPE_DEFINITIONS)
+    {
+        if (type.type != SensorType::UNKNOWN)
+        {
+            html += "<option value='" + String(static_cast<uint8_t>(type.type)) + "'>" +
+                    String(type.name);
+
+            // Přidání informace o schopnostech senzoru
+            html += " - ";
+            bool first = true;
+
+            if (type.hasTemperature)
+            {
+                html += "Temperature";
+                first = false;
             }
-            html += ">" + String(type.name) + " (0x" + String(static_cast<uint8_t>(type.type), HEX) + ")</option>";
+
+            if (type.hasHumidity)
+            {
+                html += (first ? "" : ", ") + String("Humidity");
+                first = false;
+            }
+
+            if (type.hasPressure)
+            {
+                html += (first ? "" : ", ") + String("Pressure");
+                first = false;
+            }
+
+            if (type.hasPPM)
+            {
+                html += (first ? "" : ", ") + String("CO2");
+                first = false;
+            }
+
+            if (type.hasLux)
+            {
+                html += (first ? "" : ", ") + String("Light");
+            }
+
+            if (type.hasRainAmount)
+            {
+                html += (first ? "" : ", ") + String("Rain");
+            }
+            if (type.hasWindSpeed)
+            {
+                html += (first ? "" : ", ") + String("Wind");
+            }
+
+            html += "</option>";
         }
     }
-    
+
     html += "</select>";
-    
+
     // Sériové číslo
-    html += "<label for='serialNumber'>Serial Number (Hex):</label>";
+    html += "<label for='serialNumber'>Serial Number:</label>";
     html += "<input type='text' id='serialNumber' name='serialNumber' value='" + String(sensor.serialNumber, HEX) + "' required>";
-    
+
     // Klíč zařízení
-    html += "<label for='deviceKey'>Device Key (Hex):</label>";
+    html += "<label for='deviceKey'>Device Key:</label>";
     html += "<input type='text' id='deviceKey' name='deviceKey' value='" + String(sensor.deviceKey, HEX) + "' required>";
-    
-    // Custom endpoint
-    html += "<label for='endpoint'>Custom Endpoint (Optional):</label>";
-    html += "<input type='text' id='endpoint' name='endpoint' value='" + sensor.endpoint + "'>";
-    
-    // Custom parametry
-    html += "<label for='customParams'>Custom Parameters (Optional):</label>";
-    html += "<textarea id='customParams' name='customParams' style='height: 100px;'>" + sensor.customParams + "</textarea>";
-    
+
+    // New code with a single field
+    html += "<label for='customUrl'>Custom URL with Placeholders (Optional):</label>";
+    html += "<div id='urlHelp' style='margin-bottom: 10px; font-size: 0.9em;'>";
+    html += "<p>Available placeholders:</p>";
+
+    html += "<style>";
+    html += ".placeholder-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 15px; }";
+    html += ".placeholder-item { background: #f5f5f5; padding: 8px; border-radius: 4px; }";
+    html += ".placeholder-item code { background: #e0e0e0; padding: 2px 4px; border-radius: 3px; font-family: monospace; color: #0066cc; }";
+    html += "</style>";
+    html += "<div class='placeholder-grid' style='display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px;'>";
+    // Environment placeholders
+    html += "<div id='tempPlaceholder' class='placeholder-item'>Temperature <code>*TEMP*</code></div>";
+    html += "<div id='humPlaceholder' class='placeholder-item'>Humidity <code>*HUM*</code></div>";
+    html += "<div id='pressPlaceholder' class='placeholder-item'>Pressure <code>*PRESS*</code></div>";
+    html += "<div id='ppmPlaceholder' class='placeholder-item'>CO2 <code>*PPM*</code></div>";
+    html += "<div id='luxPlaceholder' class='placeholder-item'>Light <code>*LUX*</code></div>";
+    // Weather specific
+    html += "<div id='windSpeedPlaceholder' class='placeholder-item'>Wind Speed <code>*WIND_SPEED*</code></div>";
+    html += "<div id='windDirPlaceholder' class='placeholder-item'>Wind Direction <code>*WIND_DIR*</code></div>";
+    html += "<div id='rainPlaceholder' class='placeholder-item'>Rain Amount <code>*RAIN*</code></div>";
+    html += "<div id='dailyRainPlaceholder' class='placeholder-item'>Rain since midnight <code>*DAILY_RAIN*</code></div>";
+    html += "<div id='rainRatePlaceholder' class='placeholder-item'>Rain Rate <code>*RAIN_RATE*</code></div>";
+    // Device info
+    html += "<div class='placeholder-item'>Battery <code>*BAT*</code></div>";
+    html += "<div class='placeholder-item'>Signal <code>*RSSI*</code></div>";
+    html += "<div class='placeholder-item'>Serial Number <code>*SN*</code></div>";
+    html += "<div class='placeholder-item'>Device Type <code>*TYPE*</code></div>";
+    html += "</div>"; // end of grid
+    html += "</div>"; // end of urlHelp
+    html += "<input type='text' id='customUrl' name='customUrl' placeholder='https://example.com/api?temp=*TEMP*&hum=*HUM*' value='" + sensor.customUrl + "'>";
+
+    // JavaScript pro aktualizaci placeholderů podle typu senzoru
+    html += "<script>";
+    html += "document.addEventListener('DOMContentLoaded', function() {";
+    html += "  var deviceTypeSelect = document.getElementById('deviceType');";
+    html += "  function updatePlaceholderVisibility() {";
+    html += "    var type = parseInt(deviceTypeSelect.value);";
+    html += "    console.log('Selected device type:', type);"; // Debugging
+
+    // Definice typů zařízení pro jednotlivé placeholdery
+    html += "    var tempHumDevices = [1, 2, 3];";
+    html += "    var pressureDevices = [1, 3];";
+    html += "    var co2Devices = [2];";
+    html += "    var luxDevices = [4];";
+    html += "    var weatherDevices = [3];";
+
+    // Aktualizace zobrazení
+    html += "    document.getElementById('tempPlaceholder').style.display = tempHumDevices.includes(type) ? 'block' : 'none';";
+    html += "    document.getElementById('humPlaceholder').style.display = tempHumDevices.includes(type) ? 'block' : 'none';";
+    html += "    document.getElementById('pressPlaceholder').style.display = pressureDevices.includes(type) ? 'block' : 'none';";
+    html += "    document.getElementById('ppmPlaceholder').style.display = co2Devices.includes(type) ? 'block' : 'none';";
+    html += "    document.getElementById('luxPlaceholder').style.display = luxDevices.includes(type) ? 'block' : 'none';";
+    html += "    document.getElementById('windSpeedPlaceholder').style.display = weatherDevices.includes(type) ? 'block' : 'none';";
+    html += "    document.getElementById('windDirPlaceholder').style.display = weatherDevices.includes(type) ? 'block' : 'none';";
+    html += "    document.getElementById('rainPlaceholder').style.display = weatherDevices.includes(type) ? 'block' : 'none';";
+    html += "    document.getElementById('dailyRainPlaceholder').style.display = weatherDevices.includes(type) ? 'block' : 'none';";
+    html += "    document.getElementById('rainRatePlaceholder').style.display = weatherDevices.includes(type) ? 'block' : 'none';";
+    html += "  }";
+
+    // Spustíme funkci hned po načtení stránky
+    html += "  updatePlaceholderVisibility();";
+
+    // A také při změně výběru
+    html += "  deviceTypeSelect.addEventListener('change', updatePlaceholderVisibility);";
+    html += "});";
+    html += "</script>";
+
     // Tlačítka
     html += "<input type='submit' value='Update Sensor'>";
     html += "<a href='/sensors' class='btn' style='background: #999;'>Cancel</a>";
     html += "</form>";
     html += "</div>";
-    
+
     // Přidání patičky
     addHtmlFooter(html);
-    
+
     return html;
 }
 
 // Generování stránky logů
-String HTMLGenerator::generateLogsPage(const LogEntry* logs, size_t logCount, LogLevel currentLevel) {
+String HTMLGenerator::generateLogsPage(const LogEntry *logs, size_t logCount, LogLevel currentLevel)
+{
     String html;
-    
+
     // Přidání hlavičky
     addHtmlHeader(html, "Logs");
-    
+
     // Ovládací panel logů
     html += "<div class='card'>";
     html += "<h2>Log Settings</h2>";
-    
+
     // Log level selector
     html += "<form method='post' action='/logs/level'>";
     html += "<label for='level'>Log Level:</label>";
@@ -689,133 +917,178 @@ String HTMLGenerator::generateLogsPage(const LogEntry* logs, size_t logCount, Lo
     html += "</select>";
     html += "<input type='submit' value='Set Level'>";
     html += "</form>";
-    
+
     // Tlačítka pro práci s logy
     html += "<div style='margin-top: 20px;'>";
     html += "<a href='/logs' class='btn'>Refresh</a> ";
     html += "<a href='/logs/clear' class='btn btn-delete' onclick='return confirm(\"Are you sure you want to clear all logs?\")'>Clear Logs</a>";
     html += "</div>";
     html += "</div>";
-    
+
     // Obsah logů
     html += "<div class='card'>";
     html += "<h2>System Logs</h2>";
     html += "<div class='log-container'>";
-    
+
     // Použití optimalizované metody pro generování logů
-    if (htmlBuffer != nullptr) {
+    if (htmlBuffer != nullptr)
+    {
         memset(htmlBuffer, 0, htmlBufferSize);
         size_t maxLen = htmlBufferSize;
         generateLogTable(htmlBuffer, maxLen, logs, logCount);
         html += htmlBuffer;
-    } else {
+    }
+    else
+    {
         // Fallback pokud není k dispozici buffer
-        if (logCount > 0) {
-            for (size_t i = 0; i < logCount; i++) {
+        if (logCount > 0)
+        {
+            for (size_t i = 0; i < logCount; i++)
+            {
                 size_t index = (logCount - 1 - i); // Zobrazení od nejnovějšího
                 String logClass = "log-";
-                
-                switch (logs[index].level) {
-                    case LogLevel::ERROR: logClass += "error"; break;
-                    case LogLevel::WARNING: logClass += "warning"; break;
-                    case LogLevel::INFO: logClass += "info"; break;
-                    case LogLevel::DEBUG: logClass += "debug"; break;
-                    case LogLevel::VERBOSE: logClass += "verbose"; break;
-                    default: logClass += "info"; break;
+
+                switch (logs[index].level)
+                {
+                case LogLevel::ERROR:
+                    logClass += "error";
+                    break;
+                case LogLevel::WARNING:
+                    logClass += "warning";
+                    break;
+                case LogLevel::INFO:
+                    logClass += "info";
+                    break;
+                case LogLevel::DEBUG:
+                    logClass += "debug";
+                    break;
+                case LogLevel::VERBOSE:
+                    logClass += "verbose";
+                    break;
+                default:
+                    logClass += "info";
+                    break;
                 }
-                
+
                 html += "<div class='log-entry " + logClass + "'>" + logs[index].getFormattedLog() + "</div>";
             }
-        } else {
+        }
+        else
+        {
             html += "<div class='log-entry'>No logs to display</div>";
         }
     }
-    
+
     html += "</div>"; // log-container
     html += "</div>"; // card
-    
+
     // Auto-refresh pro logy
     html += "<script>startAutoRefresh(30000);</script>";
-    
+
     // Přidání patičky
     addHtmlFooter(html);
-    
+
     return html;
 }
 
 // Generování tabulky logů
 // In HTMLGenerator.cpp
-void HTMLGenerator::generateLogTable(char* buffer, size_t& maxLen, const LogEntry* logs, size_t logCount) {
+void HTMLGenerator::generateLogTable(char *buffer, size_t &maxLen, const LogEntry *logs, size_t logCount)
+{
     size_t contentLen = 0;
-    
-    if (logCount > 0) {
+
+    if (logCount > 0)
+    {
         // Loop through from newest to oldest
-        for (size_t i = 0; i < logCount; i++) {
+        for (size_t i = 0; i < logCount; i++)
+        {
             // Calculate correct index in the circular buffer
             // This is critical to display logs correctly
             size_t logIdx = (Logger::getLogIndex() - 1 - i + Logger::getLogBufferSize()) % Logger::getLogBufferSize();
-            
-            const char* logClass = "";
-            switch (logs[logIdx].level) {
-                case LogLevel::ERROR: logClass = "log-error"; break;
-                case LogLevel::WARNING: logClass = "log-warning"; break;
-                case LogLevel::INFO: logClass = "log-info"; break;
-                case LogLevel::DEBUG: logClass = "log-debug"; break;
-                case LogLevel::VERBOSE: logClass = "log-verbose"; break;
-                default: logClass = "log-info"; break;
+
+            const char *logClass = "";
+            switch (logs[logIdx].level)
+            {
+            case LogLevel::ERROR:
+                logClass = "log-error";
+                break;
+            case LogLevel::WARNING:
+                logClass = "log-warning";
+                break;
+            case LogLevel::INFO:
+                logClass = "log-info";
+                break;
+            case LogLevel::DEBUG:
+                logClass = "log-debug";
+                break;
+            case LogLevel::VERBOSE:
+                logClass = "log-verbose";
+                break;
+            default:
+                logClass = "log-info";
+                break;
             }
-            
+
             contentLen += snprintf(buffer + contentLen, maxLen - contentLen,
-                                  "<div class='log-entry %s'>%s</div>",
-                                  logClass,
-                                  logs[logIdx].getFormattedLog().c_str());
-            
+                                   "<div class='log-entry %s'>%s</div>",
+                                   logClass,
+                                   logs[logIdx].getFormattedLog().c_str());
+
             // Safety check to avoid buffer overflow
-            if (contentLen >= maxLen - 100) {
+            if (contentLen >= maxLen - 100)
+            {
                 contentLen += snprintf(buffer + contentLen, maxLen - contentLen,
-                              "<div class='log-entry log-warning'>Log output truncated due to buffer size limitations</div>");
+                                       "<div class='log-entry log-warning'>Log output truncated due to buffer size limitations</div>");
                 break;
             }
         }
-    } else {
+    }
+    else
+    {
         contentLen += snprintf(buffer + contentLen, maxLen - contentLen,
-                              "<div class='log-entry'>No logs to display</div>");
+                               "<div class='log-entry'>No logs to display</div>");
     }
 }
 
 // Generování JSON pro API
-String HTMLGenerator::generateAPIJson(const std::vector<SensorData>& sensors) {
+String HTMLGenerator::generateAPIJson(const std::vector<SensorData> &sensors)
+{
     // Odhad velikosti JSON dokumentu
-    const size_t capacity = JSON_OBJECT_SIZE(5) + JSON_ARRAY_SIZE(sensors.size()) + 
-                          sensors.size() * JSON_OBJECT_SIZE(15) + 1024; // Extra prostor pro jistotu
-    
+    const size_t capacity = JSON_OBJECT_SIZE(5) + JSON_ARRAY_SIZE(sensors.size()) +
+                            sensors.size() * JSON_OBJECT_SIZE(15) + 1024; // Extra prostor pro jistotu
+
     DynamicJsonDocument doc(capacity);
-    
+
     // Základní informace
     doc["version"] = FIRMWARE_VERSION;
-    
+
     // Aktuální čas
     struct tm timeinfo;
-    if (getLocalTime(&timeinfo)) {
+    if (getLocalTime(&timeinfo))
+    {
         char timeStr[64];
         strftime(timeStr, sizeof(timeStr), "%Y-%m-%d %H:%M:%S", &timeinfo);
         doc["time"] = timeStr;
-    } else {
+    }
+    else
+    {
         doc["time"] = "Time not set";
     }
-    
+
     doc["status"] = WiFi.status() == WL_CONNECTED ? "connected" : "disconnected";
-    
+
     // Pole senzorů
     JsonArray sensorsArray = doc.createNestedArray("sensors");
-    
-    for (const auto& sensor : sensors) {
-        if (sensor.configured) {
+
+    for (const auto &sensor : sensors)
+    {
+        if (sensor.configured)
+        {
             JsonObject sensorObj = sensorsArray.createNestedObject();
             sensor.toJson(sensorObj);
         }
     }
-    
+
     // Serializace do řetězce
     String result;
     serializeJson(doc, result);
@@ -823,17 +1096,18 @@ String HTMLGenerator::generateAPIJson(const std::vector<SensorData>& sensors) {
 }
 
 // Generování stránky API
-String HTMLGenerator::generateAPIPage(const std::vector<SensorData>& sensors) {
+String HTMLGenerator::generateAPIPage(const std::vector<SensorData> &sensors)
+{
     String html;
-    
+
     // Přidání hlavičky
     addHtmlHeader(html, "API");
-    
+
     // API dokumentace
     html += "<div class='card'>";
     html += "<h2>API Documentation</h2>";
     html += "<p>This gateway provides a JSON API for accessing sensor data.</p>";
-    
+
     html += "<h3>Endpoints</h3>";
     html += "<table>";
     html += "<tr><th>URL</th><th>Description</th></tr>";
@@ -841,7 +1115,7 @@ String HTMLGenerator::generateAPIPage(const std::vector<SensorData>& sensors) {
     html += "<tr><td><code>/api?sensor=0xXXXX</code></td><td>Returns data for a specific sensor by serial number</td></tr>";
     html += "<tr><td><code>/api?format=csv</code></td><td>Returns sensor data in CSV format</td></tr>";
     html += "</table>";
-    
+
     html += "<h3>Example JSON Response</h3>";
     html += "<pre style='background: #f5f5f5; padding: 10px; overflow-x: auto;'>";
     html += "{\n";
@@ -849,41 +1123,49 @@ String HTMLGenerator::generateAPIPage(const std::vector<SensorData>& sensors) {
     html += "  \"time\": \"2023-08-01 12:34:56\",\n";
     html += "  \"status\": \"connected\",\n";
     html += "  \"sensors\": [\n";
-    
+
     // Generování příkladu dat senzoru
-    if (!sensors.empty()) {
-        const auto& sensor = sensors[0];
+    if (!sensors.empty())
+    {
+        const auto &sensor = sensors[0];
         html += "    {\n";
         html += "      \"name\": \"" + sensor.name + "\",\n";
         html += "      \"type\": " + String(static_cast<uint8_t>(sensor.deviceType)) + ",\n";
         html += "      \"typeName\": \"" + String(sensor.getTypeInfo().name) + "\",\n";
         html += "      \"serialNumber\": \"0x" + String(sensor.serialNumber, HEX) + "\",\n";
         html += "      \"lastSeen\": " + (sensor.lastSeen > 0 ? String((millis() - sensor.lastSeen) / 1000) : "-1") + ",\n";
-        
-        if (sensor.hasTemperature()) {
+
+        if (sensor.hasTemperature())
+        {
             html += "      \"temperature\": " + String(sensor.temperature, 2) + ",\n";
         }
-        
-        if (sensor.hasHumidity()) {
+
+        if (sensor.hasHumidity())
+        {
             html += "      \"humidity\": " + String(sensor.humidity, 2) + ",\n";
         }
-        
-        if (sensor.hasPressure()) {
+
+        if (sensor.hasPressure())
+        {
             html += "      \"pressure\": " + String(sensor.pressure, 2) + ",\n";
         }
-        
-        if (sensor.hasPPM()) {
+
+        if (sensor.hasPPM())
+        {
             html += "      \"ppm\": " + String(sensor.ppm, 0) + ",\n";
         }
-        
-        if (sensor.hasLux()) {
+
+        if (sensor.hasLux())
+        {
             html += "      \"lux\": " + String(sensor.lux, 1) + ",\n";
         }
-        
+
         html += "      \"batteryVoltage\": " + String(sensor.batteryVoltage, 2) + ",\n";
         html += "      \"rssi\": " + String(sensor.rssi) + "\n";
         html += "    }\n";
-    } else {
+    }
+    else
+    {
         html += "    {\n";
         html += "      \"name\": \"Example Sensor\",\n";
         html += "      \"type\": 1,\n";
@@ -897,17 +1179,17 @@ String HTMLGenerator::generateAPIPage(const std::vector<SensorData>& sensors) {
         html += "      \"rssi\": -72\n";
         html += "    }\n";
     }
-    
+
     html += "  ]\n";
     html += "}\n";
     html += "</pre>";
-    
+
     html += "<h3>Live API</h3>";
     html += "<p>Access the live API here: <a href='/api' target='_blank'>/api</a></p>";
     html += "</div>";
-    
+
     // Přidání patičky
     addHtmlFooter(html);
-    
+
     return html;
 }

@@ -88,6 +88,9 @@ bool LoRaProtocol::processPacketByType(SensorType type, uint8_t *data, uint8_t l
         case SensorType::VEML7700:
             return processVEML7700Packet(data, len, sensorIndex, rssi);
             
+        case SensorType::METEO:
+            return processMeteoPacket(data, len, sensorIndex, rssi);
+            
         default:
             logger.warning("Unknown device type: 0x" + String(static_cast<uint8_t>(type), HEX));
             return false;
@@ -217,7 +220,75 @@ bool LoRaProtocol::processVEML7700Packet(uint8_t *data, uint8_t len, int sensorI
     return result;
 }
 
-
+bool LoRaProtocol::processMeteoPacket(uint8_t *data, uint8_t len, int sensorIndex, int rssi) {
+    // Kontrola minimální délky pro METEO paket
+    if (len < 21) {  // 8 (hlavička) + 12 (6 hodnot * 2 bajty) + 1 (checksum)
+        logger.warning("Packet too short for METEO: " + String(len) + " bytes");
+        return false;
+    }
+    
+    // Extrakce společných údajů
+    uint32_t serialNumber = ((uint32_t)data[2] << 16) | ((uint32_t)data[3] << 8) | data[4];
+    uint16_t batteryRaw = ((uint16_t)data[5] << 8) | data[6];
+    float voltage = batteryRaw / 1000.0;  // mV to V
+    
+    // Výpis pro ladění
+    logger.debug("METEO packet: SN=0x" + String(serialNumber, HEX) + 
+                ", battery=" + String(voltage) + "V, values=" + String(data[7]));
+    
+    // Extrakce dat specifických pro METEO
+    int16_t tempRaw = (int16_t)(((uint16_t)data[8] << 8) | data[9]);
+    float temp = tempRaw / 100.0;  // setiny °C na °C
+    
+    uint16_t pressRaw = ((uint16_t)data[10] << 8) | data[11];
+    float press = pressRaw / 10.0;  // desetiny hPa na hPa
+    
+    uint16_t humRaw = ((uint16_t)data[12] << 8) | data[13];
+    float hum = humRaw / 100.0;  // setiny % na %
+    
+    // Extrakce meteorologických dat
+    uint16_t windSpeedRaw = ((uint16_t)data[14] << 8) | data[15];
+    float windSpeed = windSpeedRaw / 10.0;  // setiny m/s na m/s
+    
+    uint16_t windDirection = ((uint16_t)data[16] << 8) | data[17];
+    
+    uint16_t rainAmountRaw = ((uint16_t)data[18] << 8) | data[19];
+    float rainAmount = rainAmountRaw / 1000.0;  // tisíciny na mm
+    
+    float rainRate = 0.0f;
+    // Pokud máme rozšířený paket, přečteme i intenzitu srážek
+    if (len >= 23) {
+        uint16_t rainRateRaw = ((uint16_t)data[20] << 8) | data[21];
+        rainRate = rainRateRaw / 100.0;  // setiny mm/h na mm/h
+    }
+    
+    // Debug log všech hodnot
+    logger.debug("METEO values: temp=" + String(temp) + "°C, press=" + String(press) + 
+               "hPa, hum=" + String(hum) + "%, wind=" + String(windSpeed) + 
+               "m/s at " + String(windDirection) + "°, rain=" + String(rainAmount) + 
+               "mm, rate=" + String(rainRate) + "mm/h");
+    
+    // Aktualizace dat senzoru
+    SensorData* sensor = sensorManager.getSensor(sensorIndex);
+    if (!sensor) {
+        logger.error("Error accessing sensor data at index " + String(sensorIndex));
+        return false;
+    }
+    
+    // Aktualizace základních dat
+    bool result = sensorManager.updateSensorData(sensorIndex, temp, hum, press, 0.0f, 0.0f, voltage, rssi,
+                                              windSpeed, windDirection, rainAmount, rainRate);
+    
+    if (result) {
+        logger.info(sensor->name + " data updated - Temp: " + String(temp, 2) + "°C, Hum: " + 
+                   String(hum, 2) + "%, Press: " + String(press, 2) + " hPa, Wind: " +
+                   String(windSpeed, 1) + " m/s at " + String(windDirection) + "°, Rain: " +
+                   String(rainAmount, 1) + " mm (rate: " + String(rainRate, 1) + " mm/h), Batt: " +
+                   String(voltage, 2) + "V");
+    }
+    
+    return result;
+}
 
 // Dešifrování dat s klíčem
 void LoRaProtocol::decryptData(uint8_t *data, uint8_t data_len, uint32_t key) {
@@ -305,58 +376,125 @@ uint8_t LoRaProtocol::calculateChecksum(const uint8_t *data, uint8_t length) {
 
 // Kontrola platnosti paketu
 bool LoRaProtocol::isValidPacket(uint8_t *buf, uint8_t len) {
-     // Check packet length (minimum 7 bytes for header without checksum)
+    // Check packet length (minimum 7 bytes for header without checksum)
     if (len < 9) {  // 8 + 1 for checksum
         return false;
     }
 
-    // Get number of values from packet
+    // Get device type and number of values from packet
+    uint8_t deviceType = buf[1];
     uint8_t numValues = buf[7];
 
-    // Check if packet length matches declared number of values
-    if (len != 9 + (numValues * 2)) {  // 7 + numValues*2 + 1 for checksum
-        return false;
+    // Validate packet length based on device type and number of values
+    if (deviceType == SENSOR_TYPE_METEO) {
+        // METEO paket má 6 hodnot s možným rozšířením na 7 hodnot
+        // (v případě, že obsahuje i intenzitu srážek)
+        
+        // Ověříme, zda délka je 23 (pro 7 hodnot) nebo 21 (pro 6 hodnot)
+        if (len != 23 && len != 21) {
+            logger.warning("Invalid METEO packet length: " + String(len) + 
+                          ", expected: 21 or 23 bytes");
+            return false;
+        }
+        
+        // Pokud délka je 23, ale numValues je 6, upravíme očekávaný počet hodnot
+        if (len == 23 && numValues == 6) {
+            logger.info("Detected extended METEO packet with 7 values (including rain rate)");
+            // Poznámka: Neměníme numValues v paketu, protože by to změnilo checksum
+        }
+    } else {
+        // Standardní ověření pro ostatní typy paketů
+        if (len != 8 + (numValues * 2) + 1) {
+            logger.warning("Invalid packet length: " + String(len) + 
+                          ", expected: " + String(8 + (numValues * 2) + 1) + 
+                          " for " + String(numValues) + " values");
+            return false;
+        }
     }
 
     // Check if number of values is reasonable (e.g., not more than 10)
     if (numValues > 10) {
+        logger.warning("Invalid number of values: " + String(numValues));
         return false;
     }
 
-    // Check if deviceType makes sense (e.g., between 1-10)
-    uint8_t deviceType = buf[1];
+    // Check if deviceType makes sense (between 1-10)
     if (deviceType == 0 || deviceType > 10) {
+        logger.warning("Invalid device type: " + String(deviceType));
         return false;
     }
 
-    // Basic range checks for typical values
-    if (numValues >= 3) {
-        // Temperature: Between -5000 and 6000 (i.e., -50°C to 60°C after division by 100)
+    // Basic range checks for typical values - specific to device type
+    if (deviceType == SENSOR_TYPE_METEO && numValues >= 6) {
+        // Temperature check (similar for all sensors)
         int16_t tempSigned = (int16_t)(((uint16_t)buf[8] << 8) | buf[9]);
-
         if (tempSigned < -5000 || tempSigned > 6000) {
-        return false;
+            logger.warning("Invalid temperature: " + String(tempSigned));
+            return false;
+        }
+
+        // Pressure check (for METEO)
+        uint16_t press = ((uint16_t)buf[10] << 8) | buf[11];
+        if (press < 8500 || press > 11000) {
+            logger.warning("Invalid pressure: " + String(press));
+            return false;
+        }
+
+        // Humidity check (for METEO)
+        uint16_t hum = ((uint16_t)buf[12] << 8) | buf[13];
+        if (hum > 10000) {  // 0-100% with 2 decimal places
+            logger.warning("Invalid humidity: " + String(hum));
+            return false;
+        }
+
+        // Wind speed check (0-60 m/s in hundredths of m/s)
+        uint16_t windSpeed = ((uint16_t)buf[14] << 8) | buf[15];
+        if (windSpeed > 6000) {  // Max 60 m/s = 6000 (hundredths)
+            logger.warning("Invalid wind speed: " + String(windSpeed));
+            return false;
+        }
+
+        // Wind direction check (0-359 degrees)
+        uint16_t windDir = ((uint16_t)buf[16] << 8) | buf[17];
+        if (windDir > 359) {
+            logger.warning("Invalid wind direction: " + String(windDir));
+            return false;
+        }
+
+        // Rain amount and rain rate checks are less strict as they can vary greatly
+    }
+    else if (numValues >= 3) {
+        // Standard checks for other sensor types
+        // Temperature check
+        int16_t tempSigned = (int16_t)(((uint16_t)buf[8] << 8) | buf[9]);
+        if (tempSigned < -5000 || tempSigned > 6000) {
+            logger.warning("Invalid temperature: " + String(tempSigned));
+            return false;
         }
 
         // For BME280 check pressure, for SCD40 check PPM
         if (deviceType == SENSOR_TYPE_BME280) {
-        // Pressure: 85-110 kPa (850-1100 hPa after division by 10)
-        uint16_t press = ((uint16_t)buf[10] << 8) | buf[11];
-        if (press < 8500 || press > 11000) {
-            return false;
-        }
-        } else if (deviceType == SENSOR_TYPE_SCD40) {
-        // CO2 PPM: 0-10000 ppm (reasonable range for indoor air)
-        uint16_t ppm = ((uint16_t)buf[10] << 8) | buf[11];
-        if (ppm < 0 || ppm > 10000) {
-            return false;
-        }
+            // Pressure: 85-110 kPa (850-1100 hPa after division by 10)
+            uint16_t press = ((uint16_t)buf[10] << 8) | buf[11];
+            if (press < 8500 || press > 11000) {
+                logger.warning("Invalid pressure: " + String(press));
+                return false;
+            }
+        } 
+        else if (deviceType == SENSOR_TYPE_SCD40) {
+            // CO2 PPM: 0-10000 ppm (reasonable range for indoor air)
+            uint16_t ppm = ((uint16_t)buf[10] << 8) | buf[11];
+            if (ppm > 10000) {
+                logger.warning("Invalid CO2 PPM: " + String(ppm));
+                return false;
+            }
         }
 
-        // Humidity: 0-100% (after division by 100)
+        // Humidity check
         uint16_t hum = ((uint16_t)buf[12] << 8) | buf[13];
-        if (hum > 10000) {
-        return false;
+        if (hum > 10000) {  // 0-100% with 2 decimal places
+            logger.warning("Invalid humidity: " + String(hum));
+            return false;
         }
     }
 

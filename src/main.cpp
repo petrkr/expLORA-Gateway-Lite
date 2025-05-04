@@ -39,6 +39,10 @@ SensorManager* sensorManager; // Správce senzorů
 LoRaProtocol* loraProtocol;   // LoRa protokol
 WebPortal* webPortal;         // Webové rozhraní
 
+// Časovač pro vypnutí AP režimu
+unsigned long apStartTime = 0;
+bool temporaryAPMode = false;
+
 // Inicializace souborového systému
 bool initFileSystem() {
     if (!LittleFS.begin(true)) {
@@ -55,7 +59,7 @@ void setup() {
     Serial.begin(115200);
     delay(1000);  // Počkáme na stabilizaci
     
-    Serial.println("\n\nSVERIO ESP32-S3 + RFM95W LoRa Gateway");
+    Serial.println("\n\nexpLORA Gateway Lite");
     Serial.println("------------------------------------------------------------");
     
     // Explicitní inicializace PSRAM
@@ -104,7 +108,7 @@ void setup() {
     }
     
     // Základní log po inicializaci
-    logger.info("SVERIO Gateway starting up - Firmware v" + String(FIRMWARE_VERSION));
+    logger.info("expLORA Gateway Lite starting up - Firmware v" + String(FIRMWARE_VERSION));
 
     // Inicializace HTML generátoru
     if (!HTMLGenerator::init(true, WEB_BUFFER_SIZE)) {
@@ -138,21 +142,49 @@ void setup() {
                     String(sensorManager->getSensorCount()) + " sensors");
     }
     
-   // Initialization WiFi (based on configuration)
-// In the setup() function of main.cpp
-// Replace the existing WiFi initialization block with this:
-
-    // Initialization WiFi (based on configuration)
+    // Initialization WiFi - UPRAVENÁ ČÁST KÓDU
     logger.info("Configuring WiFi. ConfigMode: " + String(configManager->configMode ? "true" : "false") + 
                 ", SSID length: " + String(configManager->wifiSSID.length()));
 
+    // Nastavení časovače pro dočasný AP režim
+    apStartTime = millis();
+    temporaryAPMode = true;
+    
     if (configManager->configMode || configManager->wifiSSID.length() == 0) {
-        logger.info("Starting in AP mode");
-        configManager->enableConfigMode(true);
-    } else {
-        logger.info("Attempting to connect to WiFi: " + configManager->wifiSSID);
+        // Jsme v konfiguračním režimu nebo nemáme credentials - pouze AP režim
+        logger.info("Starting in AP mode only");
+        WiFi.mode(WIFI_AP);
         
-        WiFi.mode(WIFI_STA);
+        // Získáme MAC adresu zařízení a vytvoříme unikátní SSID
+        String macAddress = WiFi.macAddress();
+        macAddress.replace(":", ""); // Odstranění dvojteček
+        String uniqueSSID = "expLORA-GW-" + macAddress.substring(6); // Použijeme posledních 6 znaků MAC adresy
+        
+        // Konfigurace AP s unikátním SSID
+        WiFi.softAP(uniqueSSID.c_str());
+        logger.info("AP started with SSID: " + uniqueSSID + ", IP: " + WiFi.softAPIP().toString());
+        
+        configManager->enableConfigMode(true);
+        webPortal = new WebPortal(*sensorManager, logger, 
+                             configManager->wifiSSID, configManager->wifiPassword, 
+                             configManager->configMode, configManager->timezone);
+    } else {
+        // Máme credentials - spustíme AP+STA režim
+        logger.info("Starting in AP+STA mode (dual mode)");
+        WiFi.mode(WIFI_AP_STA);
+        
+        // Získáme MAC adresu zařízení a vytvoříme unikátní SSID
+        String macAddress = WiFi.macAddress();
+        macAddress.replace(":", ""); // Odstranění dvojteček
+        String uniqueSSID = "expLORA-GW-" + macAddress.substring(6); // Použijeme posledních 6 znaků MAC adresy
+        
+        // Konfigurace AP části s unikátním SSID
+        WiFi.softAP(uniqueSSID.c_str());
+        logger.info("Temporary AP started with SSID: " + uniqueSSID + 
+                   " (will be active for 5 minutes). IP: " + WiFi.softAPIP().toString());
+        
+        // Konfigurace STA části (klient)
+        logger.info("Attempting to connect to WiFi: " + configManager->wifiSSID);
         WiFi.begin(configManager->wifiSSID.c_str(), configManager->wifiPassword.c_str());
         
         int attempts = 0;
@@ -167,14 +199,22 @@ void setup() {
             configManager->enableConfigMode(false);
             
             // Initialize NTP
-            configTime(GMT_OFFSET_SEC, DAYLIGHT_OFFSET_SEC, NTP_SERVER);
+            configTime(0, 0, NTP_SERVER); // First set to UTC
+            setenv("TZ", configManager->timezone.c_str(), 1); // Set the TZ environment variable
+            tzset(); // Apply the time zone
             logger.info("NTP time set");
             logger.setTimeInitialized(true);
         } else {
             logger.warning("Failed to connect to WiFi after " + String(attempts) + " attempts. SSID: " + 
-                        configManager->wifiSSID + ", Starting in AP mode");
-            configManager->enableConfigMode(true);
+                        configManager->wifiSSID + ", Continuing in AP mode only");
+            // Přepneme se pouze na AP režim
+            WiFi.mode(WIFI_AP);
         }
+        
+        // Inicializace webového rozhraní - bude dostupné přes AP i klienta (pokud je připojen)
+        webPortal = new WebPortal(*sensorManager, logger, 
+                                 configManager->wifiSSID, configManager->wifiPassword, 
+                                 configManager->configMode, configManager->timezone);
     }
     
     // Inicializace LoRa modulu
@@ -188,10 +228,12 @@ void setup() {
     // Inicializace LoRa protokolu
     loraProtocol = new LoRaProtocol(*loraModule, *sensorManager, logger);
     
-    // Inicializace webového rozhraní
-    webPortal = new WebPortal(*sensorManager, logger, 
-                             configManager->wifiSSID, configManager->wifiPassword, 
-                             configManager->configMode);
+    // Inicializace webového portálu, pokud ještě není inicializován
+    if (!webPortal) {
+        webPortal = new WebPortal(*sensorManager, logger, 
+                                 configManager->wifiSSID, configManager->wifiPassword, 
+                                 configManager->configMode, configManager->timezone);
+    }
     
     if (!webPortal->init()) {
         logger.error("Failed to initialize web portal");
@@ -209,9 +251,23 @@ void setup() {
 
 // Loop - hlavní smyčka
 void loop() {
-
     esp_task_wdt_reset();
 
+    // Kontrola časovače pro dočasný AP režim
+    if (temporaryAPMode && !configManager->configMode && configManager->wifiSSID.length() > 0) {
+        if (millis() - apStartTime > AP_TIMEOUT) {
+            // Čas vypršel, přepneme do klientského režimu, pokud jsme úspěšně připojeni
+            if (WiFi.status() == WL_CONNECTED) {
+                logger.info("Temporary AP timeout reached. Switching to client mode only.");
+                WiFi.mode(WIFI_STA);
+                temporaryAPMode = false;
+            } else {
+                // Nejsme připojeni jako klient, necháme AP běžet
+                logger.info("Temporary AP timeout reached but WiFi client not connected. Keeping AP mode active.");
+                temporaryAPMode = false; // Zastavíme časovač, ale AP zůstane aktivní
+            }
+        }
+    }
 
     // Zpracování LoRa paketů
     if (loraModule && loraProtocol) {
@@ -250,7 +306,9 @@ void loop() {
                 logger.info("WiFi reconnected! IP: " + WiFi.localIP().toString());
                 
                 // Aktualizace NTP času
-                configTime(GMT_OFFSET_SEC, DAYLIGHT_OFFSET_SEC, NTP_SERVER);
+                configTime(0, 0, NTP_SERVER); // First set to UTC
+                setenv("TZ", configManager->timezone.c_str(), 1); // Set the TZ environment variable
+                tzset(); // Apply the time zone
             } else {
                 logger.warning("Failed to reconnect to WiFi");
             }
@@ -260,7 +318,7 @@ void loop() {
     // Krátké zpoždění pro stabilitu
     delay(5);
     
-    // Diagnostika paměti každých 5 minut
+    // Diagnostika paměti každých 10 minut
     static unsigned long lastMemCheck = 0;
     if (millis() - lastMemCheck > 600000) {  // 10 minut
         lastMemCheck = millis();

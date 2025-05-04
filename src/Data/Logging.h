@@ -111,6 +111,8 @@ public:
     // Nastavení inicializace času
     static void setTimeInitialized(bool initialized);
 
+    static bool isTimeInitialized() { return timeInitialized; }
+
     static size_t getLogIndex() { return logIndex; }
     static size_t getLogBufferSize() { return logBufferSize; }
 };

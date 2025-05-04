@@ -28,7 +28,9 @@ private:
     bool processBME280Packet(uint8_t *data, uint8_t len, int sensorIndex, int rssi);
     bool processSCD40Packet(uint8_t *data, uint8_t len, int sensorIndex, int rssi);
     bool processVEML7700Packet(uint8_t *data, uint8_t len, int sensorIndex, int rssi);
-    
+    bool processMeteoPacket(uint8_t *data, uint8_t len, int sensorIndex, int rssi);
+
+
     // Validace kontrolního součtu
     bool validateChecksum(uint8_t *buf, uint8_t len);
     

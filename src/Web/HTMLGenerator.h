@@ -50,8 +50,7 @@ public:
     static String generateHomePage(const std::vector<SensorData>& sensors);
     
     // Generování stránky konfigurace
-    static String generateConfigPage(const String& ssid, const String& password, 
-                                    bool configMode, const String& ip);
+    static String generateConfigPage(const String& ssid, const String& password, bool configMode, const String& ip, const String& timezone);
     
     // Generování stránky se seznamem senzorů
     static String generateSensorsPage(const std::vector<SensorData>& sensors);

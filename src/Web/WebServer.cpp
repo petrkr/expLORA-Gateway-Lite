@@ -7,9 +7,9 @@
 #include "../config.h"
 
 // Konstruktor
-WebPortal::WebPortal(SensorManager& sensors, Logger& log, String& ssid, String& password, bool& configMode)
+WebPortal::WebPortal(SensorManager& sensors, Logger& log, String& ssid, String& password, bool& configMode, String& timezone)
     : server(HTTP_PORT), sensorManager(sensors), logger(log), isAPMode(false),
-      wifiSSID(ssid), wifiPassword(password), configMode(configMode) {
+      wifiSSID(ssid), wifiPassword(password), configMode(configMode), timezone(timezone) {
 }
 
 // Add this static task function to WebPortal in WebServer.cpp
@@ -35,7 +35,7 @@ bool WebPortal::init() {
     uint8_t mac[6];
     WiFi.macAddress(mac);
     
-    apName = "SVERIO-GW-";
+    apName = "EXPLORA-";
     for (int i = 0; i < 6; i++) {
         if (mac[i] < 16) apName += "0";
         apName += String(mac[i], HEX);
@@ -90,7 +90,8 @@ void WebPortal::setupAP() {
     logger.info("Setting up AP: " + apName);
     
     // AP configuration with 4 clients max and channel 6 (less crowded usually)
-    bool apStarted = WiFi.softAP(apName.c_str(), "password123", 6, false, 4);
+    //bool apStarted = WiFi.softAP(apName.c_str(), "password123", 6, false, 4);
+    bool apStarted = WiFi.softAP(apName.c_str());
     delay(1000); // Give AP time to fully initialize
     
     if (apStarted) {
@@ -247,7 +248,7 @@ void WebPortal::handleConfig(AsyncWebServerRequest *request) {
     String currentIP = isAPMode ? WiFi.softAPIP().toString() : WiFi.localIP().toString();
     
     // Vygenerování HTML
-    String html = HTMLGenerator::generateConfigPage(wifiSSID, wifiPassword, configMode, currentIP);
+    String html = HTMLGenerator::generateConfigPage(wifiSSID, wifiPassword, configMode, currentIP, timezone);
     
     // Odeslání odpovědi
     request->send(200, "text/html", html);
@@ -261,6 +262,12 @@ void WebPortal::handleConfigPost(AsyncWebServerRequest *request) {
         wifiSSID = request->getParam("ssid", true)->value();
         wifiPassword = request->getParam("password", true)->value();
         
+        // Get timezone if present
+        if (request->hasParam("timezone", true)) {
+            String newTimezone = request->getParam("timezone", true)->value();
+            timezone = newTimezone;
+        }
+
         logger.info("New WiFi configuration - SSID: " + wifiSSID);
         
         // IMPORTANT: Make sure to save both to ConfigManager and to Preferences
@@ -289,6 +296,7 @@ void WebPortal::handleConfigPost(AsyncWebServerRequest *request) {
             doc["ssid"] = wifiSSID;
             doc["password"] = wifiPassword;
             doc["configMode"] = false;  // Explicitly set to false
+            doc["timezone"] = timezone;
             serializeJson(doc, file);
             file.close();
             logger.info("Configuration saved to file system");
@@ -331,51 +339,48 @@ void WebPortal::handleSensorAdd(AsyncWebServerRequest *request) {
 // Zpracování formuláře pro přidání senzoru
 void WebPortal::handleSensorAddPost(AsyncWebServerRequest *request) {
     logger.debug("HTTP request: POST /sensors/add");
-    
-    // Kontrola parametrů
+
+    // Check parameters
     if (request->hasParam("name", true) && 
         request->hasParam("deviceType", true) && 
         request->hasParam("serialNumber", true) && 
         request->hasParam("deviceKey", true)) {
         
-        // Získání dat z formuláře
+        // Get form data
         String name = request->getParam("name", true)->value();
         uint8_t deviceTypeValue = request->getParam("deviceType", true)->value().toInt();
         String serialNumberHex = request->getParam("serialNumber", true)->value();
         String deviceKeyHex = request->getParam("deviceKey", true)->value();
-        String endpoint = request->hasParam("endpoint", true) ? 
-                          request->getParam("endpoint", true)->value() : "";
-        String customParams = request->hasParam("customParams", true) ? 
-                              request->getParam("customParams", true)->value() : "";
+        String customUrl = request->hasParam("customUrl", true) ? 
+                          request->getParam("customUrl", true)->value() : "";
         
-        // Převod hodnot
+        // Convert values
         SensorType deviceType = static_cast<SensorType>(deviceTypeValue);
         uint32_t serialNumber = strtoul(serialNumberHex.c_str(), NULL, 16);
         uint32_t deviceKey = strtoul(deviceKeyHex.c_str(), NULL, 16);
         
-        // Přidání senzoru
+        // Add sensor
         int sensorIndex = sensorManager.addSensor(deviceType, serialNumber, deviceKey, name);
         
         if (sensorIndex >= 0) {
-            // Získání přidaného senzoru a aktualizace dalších údajů
+            // Get added sensor and update additional data
             SensorData* sensor = sensorManager.getSensor(sensorIndex);
             if (sensor) {
-                sensor->endpoint = endpoint;
-                sensor->customParams = customParams;
+                sensor->customUrl = customUrl;
                 sensorManager.saveSensors(true);
                 
                 logger.info("Added new sensor: " + name + " (SN: 0x" + serialNumberHex + ")");
                 
-                // Přesměrování na stránku se seznamem senzorů
+                // Redirect to sensors list
                 request->redirect("/sensors");
                 return;
             }
         }
         
-        // Chyba při přidání senzoru
+        // Error adding sensor
         request->send(500, "text/plain", "Failed to add sensor");
     } else {
-        // Chybí parametry
+        // Missing parameters
         request->send(400, "text/plain", "Missing parameters");
     }
 }
@@ -409,44 +414,42 @@ void WebPortal::handleSensorEdit(AsyncWebServerRequest *request) {
 void WebPortal::handleSensorEditPost(AsyncWebServerRequest *request) {
     logger.debug("HTTP request: POST /sensors/update");
     
-    // Kontrola parametrů
+    // Check parameters
     if (request->hasParam("index", true) && 
         request->hasParam("name", true) && 
         request->hasParam("deviceType", true) && 
         request->hasParam("serialNumber", true) && 
         request->hasParam("deviceKey", true)) {
         
-        // Získání dat z formuláře
+        // Get form data
         int index = request->getParam("index", true)->value().toInt();
         String name = request->getParam("name", true)->value();
         uint8_t deviceTypeValue = request->getParam("deviceType", true)->value().toInt();
         String serialNumberHex = request->getParam("serialNumber", true)->value();
         String deviceKeyHex = request->getParam("deviceKey", true)->value();
-        String endpoint = request->hasParam("endpoint", true) ? 
-                          request->getParam("endpoint", true)->value() : "";
-        String customParams = request->hasParam("customParams", true) ? 
-                              request->getParam("customParams", true)->value() : "";
+        String customUrl = request->hasParam("customUrl", true) ? 
+                          request->getParam("customUrl", true)->value() : "";
         
-        // Převod hodnot
+        // Convert values
         SensorType deviceType = static_cast<SensorType>(deviceTypeValue);
         uint32_t serialNumber = strtoul(serialNumberHex.c_str(), NULL, 16);
         uint32_t deviceKey = strtoul(deviceKeyHex.c_str(), NULL, 16);
         
-        // Aktualizace senzoru
+        // Update sensor - Update this function parameter list too (see next step)
         bool success = sensorManager.updateSensorConfig(index, name, deviceType, serialNumber, 
-                                                       deviceKey, endpoint, customParams);
+                                                       deviceKey, customUrl);
         
         if (success) {
             logger.info("Updated sensor: " + name + " (SN: 0x" + serialNumberHex + ")");
             
-            // Přesměrování na stránku se seznamem senzorů
+            // Redirect to sensors list
             request->redirect("/sensors");
         } else {
-            // Chyba při aktualizaci senzoru
+            // Error updating sensor
             request->send(500, "text/plain", "Failed to update sensor");
         }
     } else {
-        // Chybí parametry
+        // Missing parameters
         request->send(400, "text/plain", "Missing parameters");
     }
 }

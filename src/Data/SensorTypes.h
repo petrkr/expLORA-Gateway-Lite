@@ -17,6 +17,7 @@ enum class SensorType : uint8_t {
     BME280 = SENSOR_TYPE_BME280,     // Teplota, vlhkost, tlak
     SCD40 = SENSOR_TYPE_SCD40,       // Teplota, vlhkost, CO2
     VEML7700 = SENSOR_TYPE_VEML7700, // Světelný senzor (LUX)
+    METEO = SENSOR_TYPE_METEO,       // Meteorologická stanice
     // Přidejte další typy senzorů zde...
 };
 
@@ -31,16 +32,21 @@ struct SensorTypeInfo {
     bool hasPressure;              // Zda senzor poskytuje tlak
     bool hasPPM;                   // Zda senzor poskytuje PPM (CO2)
     bool hasLux;                   // Zda senzor poskytuje osvětlení (lux)
+    bool hasWindSpeed;             // Zda senzor poskytuje rychlost větru
+    bool hasWindDirection;         // Zda senzor poskytuje směr větru
+    bool hasRainAmount;            // Zda senzor poskytuje množství srážek
+    bool hasRainRate;              // Zda senzor poskytuje intenzitu srážek
     // Možnost přidat další parametry podle potřeby
 };
 
 // Tabulka definic typů senzorů - pro snadné vyhledávání a přidávání nových typů
 const SensorTypeInfo SENSOR_TYPE_DEFINITIONS[] = {
-    // type,                 name,       dataLen, offset, temp,  hum,   press, ppm,   lux
-    {SensorType::UNKNOWN,   "Unknown",      0,     7,    false, false, false, false, false},
-    {SensorType::BME280,    "BME280",       6,     7,    true,  true,  true,  false, false},
-    {SensorType::SCD40,     "SCD40",        6,     7,    true,  true,  false, true,  false},
-    {SensorType::VEML7700,  "VEML7700",     4,     7,    false, false, false, false, true},
+    // type,                 name,       dataLen, offset, temp,  hum,   press, ppm,   lux,   windS, windD, rain,  rainR
+    {SensorType::UNKNOWN,   "Unknown",      0,     7,    false, false, false, false, false, false, false, false, false},
+    {SensorType::BME280,    "CLIMA",       6,     7,    true,  true,  true,  false, false, false, false, false, false},
+    {SensorType::SCD40,     "CARBON",        6,     7,    true,  true,  false, true,  false, false, false, false, false},
+    {SensorType::METEO,     "METEO",       14,     7,    true,  true,  true,  false, false, true,  true,  true,  true},
+    //{SensorType::VEML7700,  "VEML7700",     4,     7,    false, false, false, false, true,  false, false, false, false},
     // Přidejte další typy senzorů zde v budoucnosti...
 };
 
@@ -67,5 +73,5 @@ inline SensorType sensorTypeFromValue(uint8_t value) {
 // Převod SensorType na string pro debugging a logování
 inline String sensorTypeToString(SensorType type) {
     const SensorTypeInfo& info = getSensorTypeInfo(type);
-    return String(info.name) + " (0x" + String(static_cast<uint8_t>(type), HEX) + ")";
+    return String(info.name);
 }

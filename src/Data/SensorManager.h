@@ -43,12 +43,14 @@ public:
     
     // Aktualizace dat senzoru podle typu (přetížená metoda pro jednodušší použití)
     bool updateSensorData(int index, float temperature, float humidity, float pressure, 
-                         float ppm, float lux, float batteryVoltage, int rssi);
+        float ppm, float lux, float batteryVoltage, int rssi,
+        float windSpeed = 0.0f, uint16_t windDirection = 0, 
+        float rainAmount = 0.0f, float rainRate = 0.0f);
     
-    // Aktualizace konfigurace senzoru
+    // Update sensor configuration
     bool updateSensorConfig(int index, const String& name, SensorType deviceType, 
-                           uint32_t serialNumber, uint32_t deviceKey, 
-                           const String& endpoint, const String& customParams);
+        uint32_t serialNumber, uint32_t deviceKey, 
+        const String& customUrl);
     
     // Smazání senzoru
     bool deleteSensor(int index);

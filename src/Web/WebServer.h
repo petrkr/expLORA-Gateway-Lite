@@ -36,6 +36,7 @@ private:
     String& wifiSSID;
     String& wifiPassword;
     bool& configMode;
+    String& timezone;
     
     // Inicializace AP módu
     void setupAP();
@@ -79,7 +80,7 @@ private:
     
 public:
     // Konstruktor
-    WebPortal(SensorManager& sensors, Logger& log, String& ssid, String& password, bool& configMode);
+    WebPortal(SensorManager& sensors, Logger& log, String& ssid, String& password, bool& configMode, String& timezone);
     
     // Destruktor
     ~WebPortal();
