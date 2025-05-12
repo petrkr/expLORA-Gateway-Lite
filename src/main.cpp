@@ -25,6 +25,8 @@
 
 // Protokol
 #include "Protocol/LoRaProtocol.h"
+// MQTT
+#include "Protocol/MQTTManager.h"
 
 // Web rozhraní
 #include "Web/WebServer.h"
@@ -37,6 +39,7 @@ SPIManager* spiManager;       // Správce SPI komunikace
 LoRaModule* loraModule;       // LoRa modul
 SensorManager* sensorManager; // Správce senzorů
 LoRaProtocol* loraProtocol;   // LoRa protokol
+MQTTManager* mqttManager;     // MQTT Manager
 WebPortal* webPortal;         // Webové rozhraní
 
 // Časovač pro vypnutí AP režimu
@@ -165,9 +168,9 @@ void setup() {
         logger.info("AP started with SSID: " + uniqueSSID + ", IP: " + WiFi.softAPIP().toString());
         
         configManager->enableConfigMode(true);
-        webPortal = new WebPortal(*sensorManager, logger, 
-                             configManager->wifiSSID, configManager->wifiPassword, 
-                             configManager->configMode, configManager->timezone);
+        webPortal = new WebPortal(*sensorManager, logger,
+            configManager->wifiSSID, configManager->wifiPassword,
+            configManager->configMode, *configManager, configManager->timezone);
     } else {
         // Máme credentials - spustíme AP+STA režim
         logger.info("Starting in AP+STA mode (dual mode)");
@@ -213,8 +216,8 @@ void setup() {
         
         // Inicializace webového rozhraní - bude dostupné přes AP i klienta (pokud je připojen)
         webPortal = new WebPortal(*sensorManager, logger, 
-                                 configManager->wifiSSID, configManager->wifiPassword, 
-                                 configManager->configMode, configManager->timezone);
+            configManager->wifiSSID, configManager->wifiPassword,
+            configManager->configMode, *configManager, configManager->timezone);
     }
     
     // Inicializace LoRa modulu
@@ -229,13 +232,18 @@ void setup() {
     loraProtocol = new LoRaProtocol(*loraModule, *sensorManager, logger);
     
     // Inicializace webového portálu, pokud ještě není inicializován
-    if (!webPortal) {
-        webPortal = new WebPortal(*sensorManager, logger, 
-                                 configManager->wifiSSID, configManager->wifiPassword, 
-                                 configManager->configMode, configManager->timezone);
+    if (!webPortal) { 
+        webPortal = new WebPortal(*sensorManager, logger, configManager->wifiSSID, configManager->wifiPassword, configManager->configMode, *configManager,
+        configManager->timezone);
     }
-    
-    if (!webPortal->init()) {
+
+    // Initialize MQTT Manager if WiFi is connected
+    mqttManager = new MQTTManager(*sensorManager, *configManager, logger);
+    if (!mqttManager->init()) {
+        logger.debug("MQTT Manager initialization skipped (disabled in config)");
+    }
+
+    if (!webPortal->init()) {  
         logger.error("Failed to initialize web portal");
     } else {
         logger.info("Web portal initialized successfully");
@@ -270,12 +278,12 @@ void loop() {
     }
 
     // Zpracování LoRa paketů
-    if (loraModule && loraProtocol) {
-        if (LoRaModule::hasInterrupt()) {
-            logger.debug("LoRa interrupt detected");
-            loraProtocol->processReceivedPacket();
-        }
-    }
+    //if (loraModule && loraProtocol) {
+    //    if (LoRaModule::hasInterrupt()) {
+    //        logger.debug("LoRa interrupt detected");
+    //        loraProtocol->processReceivedPacket();
+    //    }
+    //}
     
     // Pokud jsme v AP módu, zpracujeme DNS captive portal:
     if (webPortal && webPortal->isInAPMode()) {
@@ -287,6 +295,22 @@ void loop() {
         webPortal->handleClient();
     }
     
+    // Process MQTT communication
+    if (mqttManager && WiFi.status() == WL_CONNECTED) {
+        mqttManager->process();
+    }
+    
+    // Add a check for LoRa packet processing to publish to MQTT
+    static unsigned int lastProcessedIndex = -1;
+    if (loraModule && loraProtocol && LoRaModule::hasInterrupt()) {
+        if (loraProtocol->processReceivedPacket()) {
+            // If we have a mqttManager and it's connected, publish the latest sensor data
+            if (mqttManager && WiFi.status() == WL_CONNECTED) {
+                mqttManager->publishSensorData(loraProtocol->getLastProcessedSensorIndex());
+            }
+        }
+    }   
+
     // Kontrola WiFi připojení a případný reconnect
     if (!configManager->configMode && WiFi.status() != WL_CONNECTED) {
         unsigned long now = millis();
@@ -334,3 +358,4 @@ void loop() {
         #endif
     }
 }
+

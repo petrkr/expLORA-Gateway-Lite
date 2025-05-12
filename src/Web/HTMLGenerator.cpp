@@ -210,6 +210,7 @@ void HTMLGenerator::addNavigation(String &html, const String &activePage)
     html += "<a href='/' class='" + String(activePage == "Home" ? "active" : "") + "'>Home</a>";
     html += "<a href='/config' class='" + String(activePage == "Configuration" ? "active" : "") + "'>WiFi Setup</a>";
     html += "<a href='/sensors' class='" + String(activePage == "Sensors" ? "active" : "") + "'>Sensors</a>";
+    html += "<a href='/mqtt' class='" + String(activePage == "MQTT" ? "active" : "") + "'>MQTT</a>";
     html += "<a href='/logs' class='" + String(activePage == "Logs" ? "active" : "") + "'>Logs</a>";
     html += "<a href='/api' class='" + String(activePage == "API" ? "active" : "") + "'>API</a>";
     html += "<a href='/reboot' class='" + String(activePage == "Reboot" ? "active" : "") + "'>Reboot</a>";
@@ -416,7 +417,7 @@ void HTMLGenerator::generateSensorTable(char *buffer, size_t &maxLen, const std:
                                    "<tr>"
                                    "<td>%s</td>"
                                    "<td>%s</td>"
-                                   "<td>0x%X</td>",
+                                   "<td>%X</td>",
                                    sensor.name.c_str(),
                                    sensor.getTypeInfo().name,
                                    sensor.serialNumber);
@@ -510,6 +511,57 @@ String HTMLGenerator::generateConfigPage(const String &ssid, const String &passw
     return html;
 }
 
+// Generate MQTT Configuration Page
+String HTMLGenerator::generateMqttPage(const String& host, int port, const String& user, const String& password, bool enabled) {
+    String html;
+
+    // Add header
+    addHtmlHeader(html, "MQTT Configuration");
+
+    // MQTT configuration form
+    html += "<div class='card'>";
+    html += "<h2>MQTT Settings</h2>";
+    html += "<p>Configure connection to Home Assistant MQTT broker for automatic sensor discovery.</p>";
+    html += "<form method='post' action='/mqtt'>";
+    
+    // Enable MQTT checkbox
+    html += "<div class='form-group'>";
+    html += "<label for='enabled'>Enable MQTT:</label>";
+    html += "<input type='checkbox' id='enabled' name='enabled' value='1'" + String(enabled ? " checked" : "") + ">";
+    html += "</div>";
+    
+    // MQTT Broker Host
+    html += "<div class='form-group'>";
+    html += "<label for='host'>MQTT Broker Host:</label>";
+    html += "<input type='text' id='host' name='host' value='" + host + "' required>";
+    html += "</div>";
+    
+    // MQTT Port
+    html += "<div class='form-group'>";
+    html += "<label for='port'>MQTT Port:</label>";
+    html += "<input type='number' id='port' name='port' value='" + String(port) + "' required min='1' max='65535'>";
+    html += "</div>";
+    
+    // Username
+    html += "<div class='form-group'>";
+    html += "<label for='user'>Username (optional):</label>";
+    html += "<input type='text' id='user' name='user' value='" + user + "'>";
+    html += "</div>";
+    
+    // Password
+    html += "<div class='form-group'>";
+    html += "<label for='password'>Password (optional):</label>";
+    html += "<input type='password' id='password' name='password' value='" + password + "'>";
+    html += "</div>";
+    
+    html += "<input type='submit' value='Save MQTT Settings'>";
+    html += "</form></div>";
+
+    // Add footer
+    addHtmlFooter(html);
+    return html;
+}
+
 // Generování stránky se seznamem senzorů
 String HTMLGenerator::generateSensorsPage(const std::vector<SensorData> &sensors)
 {
@@ -538,7 +590,7 @@ String HTMLGenerator::generateSensorsPage(const std::vector<SensorData> &sensors
                 html += "<tr>";
                 html += "<td>" + sensor.name + "</td>";
                 html += "<td>" + sensorTypeToString(sensor.deviceType) + "</td>";
-                html += "<td>0x" + String(sensor.serialNumber, HEX) + "</td>";
+                html += "<td>" + String(sensor.serialNumber, HEX) + "</td>";
                 html += "<td>" + sensor.getLastSeenString() + "</td>";
                 html += "<td>";
                 html += "<a href='/sensors/edit?index=" + String(i) + "' class='btn'>Edit</a> ";
@@ -1111,9 +1163,9 @@ String HTMLGenerator::generateAPIPage(const std::vector<SensorData> &sensors)
     html += "<h3>Endpoints</h3>";
     html += "<table>";
     html += "<tr><th>URL</th><th>Description</th></tr>";
-    html += "<tr><td><code>/api</code></td><td>Returns all sensor data in JSON format</td></tr>";
-    html += "<tr><td><code>/api?sensor=0xXXXX</code></td><td>Returns data for a specific sensor by serial number</td></tr>";
+    html += "<tr><td><code>/api?format=json</code></td><td>Returns all sensor data in JSON format</td></tr>";
     html += "<tr><td><code>/api?format=csv</code></td><td>Returns sensor data in CSV format</td></tr>";
+    html += "<tr><td><code>/api?sensor=XXXX</code></td><td>Returns data for a specific sensor by serial number</td></tr>";
     html += "</table>";
 
     html += "<h3>Example JSON Response</h3>";
@@ -1132,7 +1184,7 @@ String HTMLGenerator::generateAPIPage(const std::vector<SensorData> &sensors)
         html += "      \"name\": \"" + sensor.name + "\",\n";
         html += "      \"type\": " + String(static_cast<uint8_t>(sensor.deviceType)) + ",\n";
         html += "      \"typeName\": \"" + String(sensor.getTypeInfo().name) + "\",\n";
-        html += "      \"serialNumber\": \"0x" + String(sensor.serialNumber, HEX) + "\",\n";
+        html += "      \"serialNumber\": \"" + String(sensor.serialNumber, HEX) + "\",\n";
         html += "      \"lastSeen\": " + (sensor.lastSeen > 0 ? String((millis() - sensor.lastSeen) / 1000) : "-1") + ",\n";
 
         if (sensor.hasTemperature())
@@ -1169,8 +1221,8 @@ String HTMLGenerator::generateAPIPage(const std::vector<SensorData> &sensors)
         html += "    {\n";
         html += "      \"name\": \"Example Sensor\",\n";
         html += "      \"type\": 1,\n";
-        html += "      \"typeName\": \"BME280\",\n";
-        html += "      \"serialNumber\": \"0xDEADBEEF\",\n";
+        html += "      \"typeName\": \"CLIMA\",\n";
+        html += "      \"serialNumber\": \"123456\",\n";
         html += "      \"lastSeen\": 300,\n";
         html += "      \"temperature\": 21.50,\n";
         html += "      \"humidity\": 45.20,\n";
@@ -1185,7 +1237,7 @@ String HTMLGenerator::generateAPIPage(const std::vector<SensorData> &sensors)
     html += "</pre>";
 
     html += "<h3>Live API</h3>";
-    html += "<p>Access the live API here: <a href='/api' target='_blank'>/api</a></p>";
+    html += "<p>Access the live API here: <a href='/api?format=json' target='_blank'>/api?format=json</a></p>";
     html += "</div>";
 
     // Přidání patičky

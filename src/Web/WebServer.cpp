@@ -7,9 +7,9 @@
 #include "../config.h"
 
 // Konstruktor
-WebPortal::WebPortal(SensorManager& sensors, Logger& log, String& ssid, String& password, bool& configMode, String& timezone)
+WebPortal::WebPortal(SensorManager& sensors, Logger& log, String& ssid, String& password, bool& configMode, ConfigManager& config, String& timezone)
     : server(HTTP_PORT), sensorManager(sensors), logger(log), isAPMode(false),
-      wifiSSID(ssid), wifiPassword(password), configMode(configMode), timezone(timezone) {
+    wifiSSID(ssid), wifiPassword(password), configMode(configMode), timezone(timezone), configManager(config) {
 }
 
 // Add this static task function to WebPortal in WebServer.cpp
@@ -35,12 +35,9 @@ bool WebPortal::init() {
     uint8_t mac[6];
     WiFi.macAddress(mac);
     
-    apName = "EXPLORA-";
-    for (int i = 0; i < 6; i++) {
-        if (mac[i] < 16) apName += "0";
-        apName += String(mac[i], HEX);
-    }
-    apName.toUpperCase();
+    String macAddress = WiFi.macAddress();
+    macAddress.replace(":", ""); // Remove colons
+    apName = "expLORA-GW-" + macAddress.substring(6); // Use last 6 characters of MAC address
     
     // Set mode based on current configuration
     isAPMode = configMode || (WiFi.status() != WL_CONNECTED);
@@ -147,6 +144,10 @@ void WebPortal::setupRoutes() {
         server.on("/logs/clear", HTTP_GET, std::bind(&WebPortal::handleLogsClear, this, std::placeholders::_1));
         server.on("/logs/level", HTTP_POST, std::bind(&WebPortal::handleLogLevel, this, std::placeholders::_1));
         server.on("/logs", HTTP_GET, std::bind(&WebPortal::handleLogs, this, std::placeholders::_1));
+        
+        // MQTT
+        server.on("/mqtt", HTTP_GET, std::bind(&WebPortal::handleMqtt, this, std::placeholders::_1));
+        server.on("/mqtt", HTTP_POST, std::bind(&WebPortal::handleMqttPost, this, std::placeholders::_1));
         
         // API
         server.on("/api", HTTP_GET, std::bind(&WebPortal::handleAPI, this, std::placeholders::_1));
@@ -369,7 +370,7 @@ void WebPortal::handleSensorAddPost(AsyncWebServerRequest *request) {
                 sensor->customUrl = customUrl;
                 sensorManager.saveSensors(true);
                 
-                logger.info("Added new sensor: " + name + " (SN: 0x" + serialNumberHex + ")");
+                logger.info("Added new sensor: " + name + " (SN: " + serialNumberHex + ")");
                 
                 // Redirect to sensors list
                 request->redirect("/sensors");
@@ -440,7 +441,7 @@ void WebPortal::handleSensorEditPost(AsyncWebServerRequest *request) {
                                                        deviceKey, customUrl);
         
         if (success) {
-            logger.info("Updated sensor: " + name + " (SN: 0x" + serialNumberHex + ")");
+            logger.info("Updated sensor: " + name + " (SN: " + serialNumberHex + ")");
             
             // Redirect to sensors list
             request->redirect("/sensors");
@@ -532,12 +533,62 @@ void WebPortal::handleLogLevel(AsyncWebServerRequest *request) {
     request->redirect("/logs");
 }
 
+// MQTT Configuration Page
+void WebPortal::handleMqtt(AsyncWebServerRequest *request) {
+    //logger.debug("HTTP request: GET /mqtt");
+    
+    // Get MQTT configuration from ConfigManager
+    //ConfigManager* configManager = (ConfigManager*)request->getParam("configManager")->value().toInt();
+    logger.debug("HTTP request: GET /mqtt"); 
+
+    // Generate HTML
+    String html = HTMLGenerator::generateMqttPage(
+        configManager.mqttHost,
+        configManager.mqttPort,
+        configManager.mqttUser,
+        configManager.mqttPassword,
+        configManager.mqttEnabled
+    );
+    
+    // Send response
+    request->send(200, "text/html", html);
+}
+
+// MQTT Configuration Post Handler
+void WebPortal::handleMqttPost(AsyncWebServerRequest *request) {
+    logger.debug("HTTP request: POST /mqtt");
+    
+    // Check parameters
+    if (request->hasParam("host", true) && 
+        request->hasParam("port", true) && 
+        request->hasParam("user", true) && 
+        request->hasParam("password", true)) {
+        
+        // Get form data
+        String host = request->getParam("host", true)->value();
+        int port = request->getParam("port", true)->value().toInt();
+        String user = request->getParam("user", true)->value();
+        String password = request->getParam("password", true)->value();
+        bool enabled = request->hasParam("enabled", true);
+        
+        // Update configuration
+        configManager.setMqttConfig(host, port, user, password, enabled);
+        
+        logger.info("MQTT configuration updated: " + host + ":" + String(port) + ", enabled: " + String(enabled));
+        
+        // Redirect to MQTT page
+        request->redirect("/mqtt");
+    } else {
+        request->send(400, "text/plain", "Missing parameters");
+    }
+}
+
 // API pro získání dat senzorů
 void WebPortal::handleAPI(AsyncWebServerRequest *request) {
     logger.debug("HTTP request: GET /api");
     
     // Kontrola parametru format
-    String format = request->hasParam("format") ? request->getParam("format")->value() : "json";
+    String format = request->hasParam("format") ? request->getParam("format")->value() : "html";
     
     // Kontrola parametru sensor
     String sensorParam = request->hasParam("sensor") ? request->getParam("sensor")->value() : "";
@@ -580,7 +631,6 @@ void WebPortal::handleAPI(AsyncWebServerRequest *request) {
             response->print(",");
             response->print(static_cast<uint8_t>(sensor.deviceType));
             response->print(",");
-            response->print("0x");
             response->print(String(sensor.serialNumber, HEX));
             response->print(",");
             response->print(sensor.lastSeen > 0 ? String((millis() - sensor.lastSeen) / 1000) : "-1");

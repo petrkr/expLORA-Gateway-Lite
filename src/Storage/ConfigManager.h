@@ -41,6 +41,13 @@ public:
     LogLevel logLevel;           // Úroveň logování
     String timezone;            // Časové pásmo ve formátu Posix
 
+    // MQTT Configuration
+    String mqttHost;             // MQTT broker hostname
+    int mqttPort;                // MQTT broker port
+    String mqttUser;             // MQTT username
+    String mqttPassword;         // MQTT password
+    bool mqttEnabled;            // MQTT enabled flag
+
     // Konstruktor
     ConfigManager(Logger& log, const char* file = CONFIG_FILE);
     
@@ -74,6 +81,10 @@ public:
     // Přepnutí do režimu konfigurace (AP)
     void enableConfigMode(bool enable = true, bool saveConfig = true);
     
+    // Nastavení MQTT konfigurace
+    bool setMqttConfig(const String& host, int port, const String& user, 
+                      const String& password, bool enabled, bool saveConfig = true);
+                      
     // Nastavení úrovně logování
     void setLogLevel(LogLevel level, bool saveConfig = true);
 

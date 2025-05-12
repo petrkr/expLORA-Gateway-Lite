@@ -212,7 +212,10 @@
  src/Hardware/SPI_Manager.h src/Hardware/PSRAM_Manager.h \
  src/Storage/ConfigManager.h \
  /Users/svermigo/.platformio/packages/framework-arduinoespressif32/libraries/Preferences/src/Preferences.h \
- src/Protocol/LoRaProtocol.h src/Web/WebServer.h \
+ src/Protocol/LoRaProtocol.h src/Protocol/MQTTManager.h \
+ .pio/libdeps/esp32-s3-devkitc-1/PubSubClient/src/PubSubClient.h \
+ /Users/svermigo/.platformio/packages/framework-arduinoespressif32/libraries/WiFi/src/WiFiClient.h \
+ src/Web/WebServer.h \
  .pio/libdeps/esp32-s3-devkitc-1/ESPAsyncWebServer/src/ESPAsyncWebServer.h \
  /Users/svermigo/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32s3/include/lwip/lwip/src/include/lwip/tcpbase.h \
  .pio/libdeps/esp32-s3-devkitc-1/AsyncTCP@src-37b83335c2ea0ad7a13d19e5f996abba/src/AsyncTCP.h \

@@ -109,6 +109,13 @@ bool ConfigManager::loadFromFS() {
     wifiPassword = doc["password"].as<String>();
     configMode = doc["configMode"] | true;
     timezone = doc["timezone"] | DEFAULT_TIMEZONE;
+
+    // MQTT configuration
+    mqttHost = doc["mqttHost"] | MQTT_DEFAULT_HOST;
+    mqttPort = doc["mqttPort"] | MQTT_DEFAULT_PORT;
+    mqttUser = doc["mqttUser"] | MQTT_DEFAULT_USER;
+    mqttPassword = doc["mqttPassword"] | MQTT_DEFAULT_PASS;
+    mqttEnabled = doc["mqttEnabled"] | MQTT_DEFAULT_ENABLED;
     
     logger.debug("Loaded config - SSID: " + wifiSSID + 
                 ", Password length: " + String(wifiPassword.length()) + 
@@ -139,6 +146,11 @@ bool ConfigManager::saveToFS() {
     doc["configMode"] = configMode;
     doc["logLevel"] = logger.levelToString(logLevel);
     doc["timezone"] = timezone;
+    doc["mqttHost"] = mqttHost;
+    doc["mqttPort"] = mqttPort;
+    doc["mqttUser"] = mqttUser;
+    doc["mqttPassword"] = mqttPassword;
+    doc["mqttEnabled"] = mqttEnabled;
     
     // Serializace do souboru
     if (serializeJson(doc, file) == 0) {
@@ -170,6 +182,21 @@ bool ConfigManager::loadFromPreferences() {
         timezone = preferences.getString("timezone", DEFAULT_TIMEZONE);
     }
     
+    // MQTT configuration from preferences
+    if (preferences.isKey("mqttHost")) {
+        mqttHost = preferences.getString("mqttHost", MQTT_DEFAULT_HOST);
+    }
+    if (preferences.isKey("mqttPort")) {
+        mqttPort = preferences.getInt("mqttPort", MQTT_DEFAULT_PORT);
+    }
+    if (preferences.isKey("mqttUser")) {
+        mqttUser = preferences.getString("mqttUser", MQTT_DEFAULT_USER);
+    }
+    if (preferences.isKey("mqttPassword")) {
+        mqttPassword = preferences.getString("mqttPassword", MQTT_DEFAULT_PASS);
+    }
+    mqttEnabled = preferences.getBool("mqttEnabled", MQTT_DEFAULT_ENABLED);
+
     // Ostatní hodnoty by měly být načteny z LittleFS, ale pokud je potřeba,
     // můžeme je načíst z Preferences jako záložní řešení
     if (wifiSSID.length() == 0 && preferences.isKey("ssid")) {
@@ -191,6 +218,13 @@ bool ConfigManager::saveToPreferences() {
     String logLevelStr = logger.levelToString(logLevel);
     preferences.putString("logLevel", logLevelStr);
     preferences.putString("timezone", timezone);
+
+    // Save MQTT configuration
+    preferences.putString("mqttHost", mqttHost);
+    preferences.putInt("mqttPort", mqttPort);
+    preferences.putString("mqttUser", mqttUser);
+    preferences.putString("mqttPassword", mqttPassword);
+    preferences.putBool("mqttEnabled", mqttEnabled);
     
     // Uložení WiFi konfigurace (jako zálohu)
     preferences.putString("ssid", wifiSSID);
@@ -198,6 +232,18 @@ bool ConfigManager::saveToPreferences() {
     preferences.putBool("configMode", configMode);
     
     return true;
+}
+
+// Add a new method to set MQTT configuration
+bool ConfigManager::setMqttConfig(const String& host, int port, const String& user, 
+                                 const String& password, bool enabled, bool saveConfig) {
+    mqttHost = host;
+    mqttPort = port;
+    mqttUser = user;
+    mqttPassword = password;
+    mqttEnabled = enabled;
+    
+    return saveConfig ? save() : true;
 }
 
 // Add a new method to set the timezone
@@ -224,6 +270,11 @@ void ConfigManager::resetToDefaults() {
     lastWifiAttempt = 0;
     logLevel = LogLevel::INFO;
     timezone = DEFAULT_TIMEZONE;
+    mqttHost = MQTT_DEFAULT_HOST;
+    mqttPort = MQTT_DEFAULT_PORT;
+    mqttUser = MQTT_DEFAULT_USER;
+    mqttPassword = MQTT_DEFAULT_PASS;
+    mqttEnabled = MQTT_DEFAULT_ENABLED;
 }
 
 // Získání verze firmwaru

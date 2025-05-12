@@ -1,0 +1,912 @@
+diff --git a/config.h b/config.h
+index 2d05d00..b5c98aa 100644
+--- a/config.h
++++ b/config.h
+@@ -42,6 +42,14 @@
+ #define NTP_SERVER "pool.ntp.org"
+ #define DEFAULT_TIMEZONE "CET-1CEST,M3.5.0,M10.5.0/3"  // Central European Time with auto DST
+ 
++// MQTT Configuration
++#define MQTT_DEFAULT_HOST "homeassistant.local"
++#define MQTT_DEFAULT_PORT 1883
++#define MQTT_DEFAULT_USER ""
++#define MQTT_DEFAULT_PASS ""
++#define MQTT_DEFAULT_ENABLED false
++#define MQTT_RECONNECT_INTERVAL 30000 // 30 seconds in milliseconds
++#define HA_DISCOVERY_PREFIX "homeassistant"
+ 
+ // CORS hlavičky pro API
+ #define CORS_HEADER_NAME "Access-Control-Allow-Origin"
+@@ -63,4 +71,4 @@
+ 
+ // Nastavení OTA updatu
+ #define OTA_PASSWORD "admin"    // Heslo pro OTA update
+-#define OTA_PORT 3232           // Port pro OTA update
+\ No newline at end of file
++#define OTA_PORT 3232           // Port pro OTA update
+diff --git a/ConfigManager.h b/ConfigManager.h
+index c0c6775..c7db1b1 100644
+--- a/ConfigManager.h
++++ b/ConfigManager.h
+@@ -62,6 +62,13 @@ public:
+     bool configMode;             // Režim konfigurace (AP mód)
+     unsigned long lastWifiAttempt; // Čas posledního pokusu o připojení k WiFi
+     LogLevel logLevel;           // Úroveň logování
++    
++    // MQTT Configuration
++    String mqttHost;             // MQTT broker hostname
++    int mqttPort;                // MQTT broker port
++    String mqttUser;             // MQTT username
++    String mqttPassword;         // MQTT password
++    bool mqttEnabled;            // MQTT enabled flag
+     String timezone;            // Časové pásmo ve formátu Posix
+ 
+     // Konstruktor
+@@ -91,5 +98,9 @@ public:
+     // Nastavení úrovně logování
+     void setLogLevel(LogLevel level, bool saveConfig = true);
+ 
++    // Nastavení MQTT konfigurace
++    bool setMqttConfig(const String& host, int port, const String& user, 
++                      const String& password, bool enabled, bool saveConfig = true);
++                      
+     // Nastavení časového pásma
+     bool setTimezone(const String& newTimezone, bool saveConfig = true);
+-};
+\ No newline at end of file
++};
+diff --git a/ConfigManager.cpp b/ConfigManager.cpp
+index 8bc5e25..21afaea 100644
+--- a/ConfigManager.cpp
++++ b/ConfigManager.cpp
+@@ -80,6 +80,12 @@ bool ConfigManager::loadFromFS() {
+     wifiPassword = doc["password"].as<String>();
+     configMode = doc["configMode"] | true;
+     timezone = doc["timezone"] | DEFAULT_TIMEZONE;
++
++    // MQTT configuration
++    mqttHost = doc["mqttHost"] | MQTT_DEFAULT_HOST;
++    mqttPort = doc["mqttPort"] | MQTT_DEFAULT_PORT;
++    mqttUser = doc["mqttUser"] | MQTT_DEFAULT_USER;
++    mqttPassword = doc["mqttPassword"] | MQTT_DEFAULT_PASS;
++    mqttEnabled = doc["mqttEnabled"] | MQTT_DEFAULT_ENABLED;
+     
+     logger.debug("Loaded config - SSID: " + wifiSSID + 
+                 ", Password length: " + String(wifiPassword.length()) + 
+@@ -113,6 +119,11 @@ bool ConfigManager::saveToFS() {
+     doc["password"] = wifiPassword;
+     doc["configMode"] = configMode;
+     doc["logLevel"] = logger.levelToString(logLevel);
++    doc["mqttHost"] = mqttHost;
++    doc["mqttPort"] = mqttPort;
++    doc["mqttUser"] = mqttUser;
++    doc["mqttPassword"] = mqttPassword;
++    doc["mqttEnabled"] = mqttEnabled;
+     doc["timezone"] = timezone;
+     
+     // Serializace do souboru
+@@ -142,6 +153,21 @@ bool ConfigManager::loadFromPreferences() {
+     if (preferences.isKey("timezone")) {
+         timezone = preferences.getString("timezone", DEFAULT_TIMEZONE);
+     }
++
++    // MQTT configuration from preferences
++    if (preferences.isKey("mqttHost")) {
++        mqttHost = preferences.getString("mqttHost", MQTT_DEFAULT_HOST);
++    }
++    if (preferences.isKey("mqttPort")) {
++        mqttPort = preferences.getInt("mqttPort", MQTT_DEFAULT_PORT);
++    }
++    if (preferences.isKey("mqttUser")) {
++        mqttUser = preferences.getString("mqttUser", MQTT_DEFAULT_USER);
++    }
++    if (preferences.isKey("mqttPassword")) {
++        mqttPassword = preferences.getString("mqttPassword", MQTT_DEFAULT_PASS);
++    }
++    mqttEnabled = preferences.getBool("mqttEnabled", MQTT_DEFAULT_ENABLED);
+     
+     // Ostatní hodnoty by měly být načteny z LittleFS, ale pokud je potřeba,
+     // můžeme je načíst z Preferences jako záložní řešení
+@@ -166,6 +192,12 @@ bool ConfigManager::saveToPreferences() {
+     String logLevelStr = logger.levelToString(logLevel);
+     preferences.putString("logLevel", logLevelStr);
+     preferences.putString("timezone", timezone);
++
++    // Save MQTT configuration
++    preferences.putString("mqttHost", mqttHost);
++    preferences.putInt("mqttPort", mqttPort);
++    preferences.putString("mqttUser", mqttUser);
++    preferences.putString("mqttPassword", mqttPassword);
++    preferences.putBool("mqttEnabled", mqttEnabled);
+     
+     // Uložení WiFi konfigurace (jako zálohu)
+     preferences.putString("ssid", wifiSSID);
+@@ -175,6 +207,17 @@ bool ConfigManager::saveToPreferences() {
+     return true;
+ }
+ 
++// Add a new method to set MQTT configuration
++bool ConfigManager::setMqttConfig(const String& host, int port, const String& user, 
++                                 const String& password, bool enabled, bool saveConfig) {
++    mqttHost = host;
++    mqttPort = port;
++    mqttUser = user;
++    mqttPassword = password;
++    mqttEnabled = enabled;
++    
++    return saveConfig ? save() : true;
++}
++
+ // Add a new method to set the timezone
+ bool ConfigManager::setTimezone(const String& newTimezone, bool saveConfig) {
+     timezone = newTimezone;
+@@ -197,6 +240,11 @@ void ConfigManager::resetToDefaults() {
+     configMode = true;
+     lastWifiAttempt = 0;
+     logLevel = LogLevel::INFO;
++    mqttHost = MQTT_DEFAULT_HOST;
++    mqttPort = MQTT_DEFAULT_PORT;
++    mqttUser = MQTT_DEFAULT_USER;
++    mqttPassword = MQTT_DEFAULT_PASS;
++    mqttEnabled = MQTT_DEFAULT_ENABLED;
+     timezone = DEFAULT_TIMEZONE;
+ }
+ 
+diff --git a/WebServer.h b/WebServer.h
+index b8f28e2..6e0bfe9 100644
+--- a/WebServer.h
++++ b/WebServer.h
+@@ -49,6 +49,8 @@ private:
+     String& wifiSSID;
+     String& wifiPassword;
+     bool& configMode;
++    // Reference na MQTT konfiguraci
++    String& mqttHost; 
+     String& timezone;
+     
+     // Inicializace AP módu
+@@ -74,6 +76,8 @@ private:
+     void handleLogsClear(AsyncWebServerRequest *request);
+     void handleLogLevel(AsyncWebServerRequest *request);
+     void handleAPI(AsyncWebServerRequest *request);
++    void handleMqtt(AsyncWebServerRequest *request);
++    void handleMqttPost(AsyncWebServerRequest *request);
+     void handleReboot(AsyncWebServerRequest *request);
+     void handleNotFound(AsyncWebServerRequest *request);
+     
+@@ -87,7 +91,8 @@ private:
+     
+ public:
+     // Konstruktor
+-    WebPortal(SensorManager& sensors, Logger& log, String& ssid, String& password, bool& configMode, String& timezone);
++    WebPortal(SensorManager& sensors, Logger& log, String& ssid, String& password, 
++              bool& configMode, String& mqttHost, String& timezone);
+     
+     // Destruktor
+     ~WebPortal();
+@@ -107,4 +112,4 @@ public:
+     
+     // Restart webového serveru
+     void restart();
+-};
+\ No newline at end of file
++};
+diff --git a/WebServer.cpp b/WebServer.cpp
+index ef00ed3..ea57d33 100644
+--- a/WebServer.cpp
++++ b/WebServer.cpp
+@@ -5,8 +5,8 @@
+ #include <LittleFS.h>
+ #include "../config.h"
+ 
+-// Konstruktor
+-WebPortal::WebPortal(SensorManager& sensors, Logger& log, String& ssid, String& password, bool& configMode, String& timezone)
++// Constructor with MQTT host reference
++WebPortal::WebPortal(SensorManager& sensors, Logger& log, String& ssid, String& password, bool& configMode, String& mqttHost, String& timezone)
+     : server(HTTP_PORT), sensorManager(sensors), logger(log), isAPMode(false),
+       wifiSSID(ssid), wifiPassword(password), configMode(configMode), timezone(timezone) {
+ }
+@@ -75,6 +75,7 @@ void WebPortal::setupRoutes() {
+         server.on("/logs", HTTP_GET, std::bind(&WebPortal::handleLogs, this, std::placeholders::_1));
+         
+         // API
++        server.on("/mqtt", HTTP_GET, std::bind(&WebPortal::handleMqtt, this, std::placeholders::_1));
+         server.on("/api", HTTP_GET, std::bind(&WebPortal::handleAPI, this, std::placeholders::_1));
+         
+         // Reboot
+@@ -339,6 +340,54 @@ void WebPortal::handleLogLevel(AsyncWebServerRequest *request) {
+     request->redirect("/logs");
+ }
+ 
++// MQTT Configuration Page
++void WebPortal::handleMqtt(AsyncWebServerRequest *request) {
++    logger.debug("HTTP request: GET /mqtt");
++    
++    // Get MQTT configuration from ConfigManager
++    ConfigManager* configManager = (ConfigManager*)request->getParam("configManager")->value().toInt();
++    
++    // Generate HTML
++    String html = HTMLGenerator::generateMqttPage(
++        configManager->mqttHost,
++        configManager->mqttPort,
++        configManager->mqttUser,
++        configManager->mqttPassword,
++        configManager->mqttEnabled
++    );
++    
++    // Send response
++    request->send(200, "text/html", html);
++}
++
++// MQTT Configuration Post Handler
++void WebPortal::handleMqttPost(AsyncWebServerRequest *request) {
++    logger.debug("HTTP request: POST /mqtt");
++    
++    // Check parameters
++    if (request->hasParam("host", true) && 
++        request->hasParam("port", true) && 
++        request->hasParam("user", true) && 
++        request->hasParam("password", true)) {
++        
++        // Get form data
++        String host = request->getParam("host", true)->value();
++        int port = request->getParam("port", true)->value().toInt();
++        String user = request->getParam("user", true)->value();
++        String password = request->getParam("password", true)->value();
++        bool enabled = request->hasParam("enabled", true);
++        
++        // Update configuration
++        ConfigManager* configManager = (ConfigManager*)request->getParam("configManager")->value().toInt();
++        configManager->setMqttConfig(host, port, user, password, enabled);
++        
++        logger.info("MQTT configuration updated: " + host + ":" + String(port) + ", enabled: " + String(enabled));
++        
++        // Redirect to MQTT page
++        request->redirect("/mqtt");
++    } else {
++        request->send(400, "text/plain", "Missing parameters");
++    }
++}
++
+ // API pro získání dat senzorů
+ void WebPortal::handleAPI(AsyncWebServerRequest *request) {
+     logger.debug("HTTP request: GET /api");
+diff --git a/HTMLGenerator.h b/HTMLGenerator.h
+index 6afa2cb..9ed6ad8 100644
+--- a/HTMLGenerator.h
++++ b/HTMLGenerator.h
+@@ -64,6 +64,9 @@ public:
+     // Generování stránky konfigurace
+     static String generateConfigPage(const String& ssid, const String& password, bool configMode, const String& ip, const String& timezone);
+     
++    // Generování stránky MQTT konfigurace
++    static String generateMqttPage(const String& host, int port, const String& user, const String& password, bool enabled);
++    
+     // Generování stránky se seznamem senzorů
+     static String generateSensorsPage(const std::vector<SensorData>& sensors);
+     
+@@ -90,4 +93,4 @@ public:
+     static String getWifiNetworkOptions(const String& currentSSID);
+     static String getSensorTypeOptions(SensorType currentType);
+     static String getLogLevelOptions(LogLevel currentLevel);
+-};
+\ No newline at end of file
++};
+diff --git a/HTMLGenerator.cpp b/HTMLGenerator.cpp
+index 3ec5d0c..cf83ea0 100644
+--- a/HTMLGenerator.cpp
++++ b/HTMLGenerator.cpp
+@@ -96,6 +96,7 @@ void HTMLGenerator::addNavigation(String &html, const String &activePage)
+     html += "<a href='/' class='" + String(activePage == "Home" ? "active" : "") + "'>Home</a>";
+     html += "<a href='/config' class='" + String(activePage == "Configuration" ? "active" : "") + "'>WiFi Setup</a>";
+     html += "<a href='/sensors' class='" + String(activePage == "Sensors" ? "active" : "") + "'>Sensors</a>";
++    html += "<a href='/mqtt' class='" + String(activePage == "MQTT" ? "active" : "") + "'>MQTT</a>";
+     html += "<a href='/logs' class='" + String(activePage == "Logs" ? "active" : "") + "'>Logs</a>";
+     html += "<a href='/api' class='" + String(activePage == "API" ? "active" : "") + "'>API</a>";
+     html += "<a href='/reboot' class='" + String(activePage == "Reboot" ? "active" : "") + "'>Reboot</a>";
+@@ -259,6 +260,55 @@ String HTMLGenerator::generateConfigPage(const String &ssid, const String &passw
+     return html;
+ }
+ 
++// Generate MQTT Configuration Page
++String HTMLGenerator::generateMqttPage(const String& host, int port, const String& user, const String& password, bool enabled) {
++    String html;
++
++    // Add header
++    addHtmlHeader(html, "MQTT Configuration");
++
++    // MQTT configuration form
++    html += "<div class='card'>";
++    html += "<h2>MQTT Settings</h2>";
++    html += "<p>Configure connection to Home Assistant MQTT broker for automatic sensor discovery.</p>";
++    html += "<form method='post' action='/mqtt'>";
++    
++    // Enable MQTT checkbox
++    html += "<div class='form-group'>";
++    html += "<label for='enabled'>Enable MQTT:</label>";
++    html += "<input type='checkbox' id='enabled' name='enabled' value='1'" + String(enabled ? " checked" : "") + ">";
++    html += "</div>";
++    
++    // MQTT Broker Host
++    html += "<div class='form-group'>";
++    html += "<label for='host'>MQTT Broker Host:</label>";
++    html += "<input type='text' id='host' name='host' value='" + host + "' required>";
++    html += "</div>";
++    
++    // MQTT Port
++    html += "<div class='form-group'>";
++    html += "<label for='port'>MQTT Port:</label>";
++    html += "<input type='number' id='port' name='port' value='" + String(port) + "' required min='1' max='65535'>";
++    html += "</div>";
++    
++    // Username
++    html += "<div class='form-group'>";
++    html += "<label for='user'>Username (optional):</label>";
++    html += "<input type='text' id='user' name='user' value='" + user + "'>";
++    html += "</div>";
++    
++    // Password
++    html += "<div class='form-group'>";
++    html += "<label for='password'>Password (optional):</label>";
++    html += "<input type='password' id='password' name='password' value='" + password + "'>";
++    html += "</div>";
++    
++    html += "<input type='submit' value='Save MQTT Settings'>";
++    html += "</form></div>";
++
++    // Add footer
++    addHtmlFooter(html);
++    return html;
++}
++
+ // Generování stránky se seznamem senzorů
+ String HTMLGenerator::generateSensorsPage(const std::vector<SensorData> &sensors)
+ {
+diff --git a/MQTTManager.h b/MQTTManager.h
+new file mode 100644
+index 0000000..71dccce
+--- /dev/null
++++ b/MQTTManager.h
+@@ -0,0 +1,50 @@
++#pragma once
++
++#include <Arduino.h>
++#include <PubSubClient.h>
++#include <WiFiClient.h>
++#include <vector>
++#include "Data/SensorManager.h"
++#include "Data/Logging.h"
++#include "Storage/ConfigManager.h"
++
++/**
++ * Třída pro správu MQTT komunikace s Home Assistant
++ * 
++ * Zajišťuje automatickou detekci senzorů v Home Assistant pomocí MQTT discovery
++ * a pravidelné publikování dat ze senzorů.
++ */
++class MQTTManager {
++private:
++    WiFiClient wifiClient;       // WiFi klient pro MQTT
++    PubSubClient mqttClient;     // MQTT klient
++    SensorManager& sensorManager; // Reference na správce senzorů
++    ConfigManager& configManager; // Reference na konfiguraci
++    Logger& logger;               // Reference na logger
++    
++    String clientId;              // MQTT Client ID
++    unsigned long lastReconnectAttempt; // Čas posledního pokusu o připojení
++    unsigned long lastDiscoveryUpdate;  // Čas poslední aktualizace discovery
++    
++    // Připojení k MQTT brokeru
++    bool connect();
++    
++    // Vytvoření discovery tématu pro senzor
++    String buildDiscoveryTopic(const SensorData& sensor, const String& valueType);
++    
++    // Vytvoření konfiguračního JSON pro Home Assistant discovery
++    String buildDiscoveryJson(const SensorData& sensor, const String& valueType, const String& stateTopic);
++    
++public:
++    // Konstruktor
++    MQTTManager(SensorManager& sensors, ConfigManager& config, Logger& log);
++    
++    // Inicializace
++    bool init();
++    
++    // Zpracování MQTT komunikace (volat v hlavní smyčce)
++    void process();
++    
++    // Publikování discovery konfigurace pro senzory
++    void publishDiscovery();
++    
++    // Publikování dat senzorů
++    void publishSensorData(int sensorIndex);
++};
+diff --git a/MQTTManager.cpp b/MQTTManager.cpp
+new file mode 100644
+index 0000000..13f9a81
+--- /dev/null
++++ b/MQTTManager.cpp
+@@ -0,0 +1,240 @@
++#include "MQTTManager.h"
++#include <ArduinoJson.h>
++#include "config.h"
++
++// Konstruktor
++MQTTManager::MQTTManager(SensorManager& sensors, ConfigManager& config, Logger& log)
++    : mqttClient(wifiClient), sensorManager(sensors), configManager(config), logger(log),
++      lastReconnectAttempt(0), lastDiscoveryUpdate(0) {
++    
++    // Generate unique client ID from MAC address
++    clientId = "explora-gw-";
++    uint8_t mac[6];
++    WiFi.macAddress(mac);
++    for (int i = 0; i < 6; i++) {
++        if (mac[i] < 0x10) clientId += '0';
++        clientId += String(mac[i], HEX);
++    }
++}
++
++// Inicializace
++bool MQTTManager::init() {
++    // Only initialize if MQTT is enabled in configuration
++    if (!configManager.mqttEnabled) {
++        logger.info("MQTT integration disabled in configuration");
++        return false;
++    }
++    
++    // Configure MQTT client
++    mqttClient.setServer(configManager.mqttHost.c_str(), configManager.mqttPort);
++    
++    // Log initialization
++    logger.info("MQTT initialized with broker: " + configManager.mqttHost + ":" + String(configManager.mqttPort));
++    
++    return true;
++}
++
++// Připojení k MQTT brokeru
++bool MQTTManager::connect() {
++    logger.debug("Attempting to connect to MQTT broker...");
++    
++    bool connected = false;
++    
++    // Connect with credentials if provided
++    if (configManager.mqttUser.length() > 0) {
++        connected = mqttClient.connect(
++            clientId.c_str(),
++            configManager.mqttUser.c_str(),
++            configManager.mqttPassword.c_str()
++        );
++    } else {
++        connected = mqttClient.connect(clientId.c_str());
++    }
++    
++    if (connected) {
++        logger.info("Connected to MQTT broker");
++        
++        // Publish discovery information after successful connection
++        publishDiscovery();
++    } else {
++        logger.warning("Failed to connect to MQTT broker, error code: " + String(mqttClient.state()));
++    }
++    
++    return connected;
++}
++
++// Zpracování MQTT komunikace (volat v hlavní smyčce)
++void MQTTManager::process() {
++    // Skip if MQTT is disabled in configuration
++    if (!configManager.mqttEnabled) {
++        return;
++    }
++    
++    // Check connection to WiFi and MQTT broker
++    if (WiFi.status() == WL_CONNECTED) {
++        if (!mqttClient.connected()) {
++            // Try to reconnect on interval
++            unsigned long now = millis();
++            if (now - lastReconnectAttempt > MQTT_RECONNECT_INTERVAL) {
++                lastReconnectAttempt = now;
++                if (connect()) {
++                    lastReconnectAttempt = 0;
++                }
++            }
++        } else {
++            // Process MQTT loop
++            mqttClient.loop();
++            
++            // Republish discovery information periodically (every hour)
++            unsigned long now = millis();
++            if (now - lastDiscoveryUpdate > 3600000) { // 1 hour
++                lastDiscoveryUpdate = now;
++                publishDiscovery();
++            }
++        }
++    }
++}
++
++// Publikování discovery konfigurace pro senzory
++void MQTTManager::publishDiscovery() {
++    // Skip if not connected
++    if (!mqttClient.connected()) {
++        return;
++    }
++    
++    logger.info("Publishing Home Assistant discovery information...");
++    
++    // Get all active sensors
++    std::vector<SensorData> sensors = sensorManager.getActiveSensors();
++    
++    // Publish discovery information for each sensor
++    for (const auto& sensor : sensors) {
++        // Base state topic for this sensor
++        String baseTopic = "explora/" + String(sensor.serialNumber, HEX);
++        
++        // Publish discovery for each supported value type based on sensor type
++        if (sensor.hasTemperature()) {
++            String topic = buildDiscoveryTopic(sensor, "temperature");
++            String payload = buildDiscoveryJson(sensor, "temperature", baseTopic + "/temperature");
++            mqttClient.publish(topic.c_str(), payload.c_str(), true); // Retained message
++            logger.debug("Published temperature discovery for " + sensor.name);
++        }
++        
++        if (sensor.hasHumidity()) {
++            String topic = buildDiscoveryTopic(sensor, "humidity");
++            String payload = buildDiscoveryJson(sensor, "humidity", baseTopic + "/humidity");
++            mqttClient.publish(topic.c_str(), payload.c_str(), true);
++            logger.debug("Published humidity discovery for " + sensor.name);
++        }
++        
++        if (sensor.hasPressure()) {
++            String topic = buildDiscoveryTopic(sensor, "pressure");
++            String payload = buildDiscoveryJson(sensor, "pressure", baseTopic + "/pressure");
++            mqttClient.publish(topic.c_str(), payload.c_str(), true);
++            logger.debug("Published pressure discovery for " + sensor.name);
++        }
++        
++        if (sensor.hasPPM()) {
++            String topic = buildDiscoveryTopic(sensor, "co2");
++            String payload = buildDiscoveryJson(sensor, "co2", baseTopic + "/co2");
++            mqttClient.publish(topic.c_str(), payload.c_str(), true);
++            logger.debug("Published CO2 discovery for " + sensor.name);
++        }
++        
++        if (sensor.hasLux()) {
++            String topic = buildDiscoveryTopic(sensor, "illuminance");
++            String payload = buildDiscoveryJson(sensor, "illuminance", baseTopic + "/illuminance");
++            mqttClient.publish(topic.c_str(), payload.c_str(), true);
++            logger.debug("Published illuminance discovery for " + sensor.name);
++        }
++        
++        if (sensor.hasWindSpeed()) {
++            String topic = buildDiscoveryTopic(sensor, "wind_speed");
++            String payload = buildDiscoveryJson(sensor, "wind_speed", baseTopic + "/wind_speed");
++            mqttClient.publish(topic.c_str(), payload.c_str(), true);
++            logger.debug("Published wind speed discovery for " + sensor.name);
++        }
++        
++        if (sensor.hasWindDirection()) {
++            String topic = buildDiscoveryTopic(sensor, "wind_direction");
++            String payload = buildDiscoveryJson(sensor, "wind_direction", baseTopic + "/wind_direction");
++            mqttClient.publish(topic.c_str(), payload.c_str(), true);
++            logger.debug("Published wind direction discovery for " + sensor.name);
++        }
++        
++        if (sensor.hasRainAmount()) {
++            String topic = buildDiscoveryTopic(sensor, "rain_amount");
++            String payload = buildDiscoveryJson(sensor, "rain_amount", baseTopic + "/rain_amount");
++            mqttClient.publish(topic.c_str(), payload.c_str(), true);
++            logger.debug("Published rain amount discovery for " + sensor.name);
++            
++            // Also for daily rain total
++            topic = buildDiscoveryTopic(sensor, "daily_rain");
++            payload = buildDiscoveryJson(sensor, "daily_rain", baseTopic + "/daily_rain");
++            mqttClient.publish(topic.c_str(), payload.c_str(), true);
++            logger.debug("Published daily rain discovery for " + sensor.name);
++        }
++        
++        if (sensor.hasRainRate()) {
++            String topic = buildDiscoveryTopic(sensor, "rain_rate");
++            String payload = buildDiscoveryJson(sensor, "rain_rate", baseTopic + "/rain_rate");
++            mqttClient.publish(topic.c_str(), payload.c_str(), true);
++            logger.debug("Published rain rate discovery for " + sensor.name);
++        }
++        
++        // Battery voltage - available for all sensors
++        String topic = buildDiscoveryTopic(sensor, "battery");
++        String payload = buildDiscoveryJson(sensor, "battery", baseTopic + "/battery");
++        mqttClient.publish(topic.c_str(), payload.c_str(), true);
++        logger.debug("Published battery discovery for " + sensor.name);
++        
++        // RSSI (signal strength) - available for all sensors
++        topic = buildDiscoveryTopic(sensor, "rssi");
++        payload = buildDiscoveryJson(sensor, "rssi", baseTopic + "/rssi");
++        mqttClient.publish(topic.c_str(), payload.c_str(), true);
++        logger.debug("Published RSSI discovery for " + sensor.name);
++    }
++    
++    logger.info("Home Assistant discovery completed for " + String(sensors.size()) + " sensors");
++    lastDiscoveryUpdate = millis();
++}
++
++// Vytvoření discovery tématu pro senzor
++String MQTTManager::buildDiscoveryTopic(const SensorData& sensor, const String& valueType) {
++    String deviceClass = valueType;
++    
++    // Map value type to Home Assistant device class
++    // https://www.home-assistant.io/integrations/sensor/#device-class
++    if (valueType == "co2") deviceClass = "carbon_dioxide";
++    else if (valueType == "daily_rain") deviceClass = "precipitation";
++    else if (valueType == "rain_amount") deviceClass = "precipitation";
++    else if (valueType == "rain_rate") deviceClass = "precipitation_intensity";
++    else if (valueType == "wind_speed") deviceClass = "wind_speed";
++    else if (valueType == "wind_direction") deviceClass = "wind_direction";
++    
++    // Create discovery topic
++    return String(HA_DISCOVERY_PREFIX) + "/sensor/" + 
++           "explora_" + String(sensor.serialNumber, HEX) + "_" + valueType + "/config";
++}
++
++// Vytvoření konfiguračního JSON pro Home Assistant discovery
++String MQTTManager::buildDiscoveryJson(const SensorData& sensor, const String& valueType, const String& stateTopic) {
++    // Create JSON document for discovery payload
++    DynamicJsonDocument doc(1024);
++    
++    // Entity name
++    doc["name"] = sensor.name + " " + capitalizeFirst(valueType);
++    
++    // State topic
++    doc["state_topic"] = stateTopic;
++    
++    // Value template - just use raw value
++    doc["value_template"] = "{{ value }}";
++    
++    // Unique ID
++    doc["unique_id"] = "explora_" + String(sensor.serialNumber, HEX) + "_" + valueType;
++    
++    // Availability topic - use LWT (Last Will and Testament)
++    doc["availability_topic"] = "explora/status";
++    doc["payload_available"] = "online";
++    doc["payload_not_available"] = "offline";
++    
++    // Set measurement units based on value type
++    if (valueType == "temperature") {
++        doc["device_class"] = "temperature";
++        doc["unit_of_measurement"] = "°C";
++        doc["suggested_display_precision"] = 1;
++    } else if (valueType == "humidity") {
++        doc["device_class"] = "humidity";
++        doc["unit_of_measurement"] = "%";
++        doc["suggested_display_precision"] = 1;
++    } else if (valueType == "pressure") {
++        doc["device_class"] = "pressure";
++        doc["unit_of_measurement"] = "hPa";
++        doc["suggested_display_precision"] = 1;
++    } else if (valueType == "co2") {
++        doc["device_class"] = "carbon_dioxide";
++        doc["unit_of_measurement"] = "ppm";
++    } else if (valueType == "illuminance") {
++        doc["device_class"] = "illuminance";
++        doc["unit_of_measurement"] = "lx";
++        doc["suggested_display_precision"] = 1;
++    } else if (valueType == "wind_speed") {
++        doc["device_class"] = "wind_speed";
++        doc["unit_of_measurement"] = "m/s";
++        doc["suggested_display_precision"] = 1;
++    } else if (valueType == "wind_direction") {
++        doc["device_class"] = "wind_direction";
++        doc["unit_of_measurement"] = "°";
++    } else if (valueType == "rain_amount") {
++        doc["device_class"] = "precipitation";
++        doc["unit_of_measurement"] = "mm";
++        doc["suggested_display_precision"] = 1;
++    } else if (valueType == "daily_rain") {
++        doc["device_class"] = "precipitation";
++        doc["unit_of_measurement"] = "mm";
++        doc["suggested_display_precision"] = 1;
++        doc["name"] = sensor.name + " Daily Rain Total";
++    } else if (valueType == "rain_rate") {
++        doc["device_class"] = "precipitation_intensity";
++        doc["unit_of_measurement"] = "mm/h";
++        doc["suggested_display_precision"] = 1;
++    } else if (valueType == "battery") {
++        doc["device_class"] = "voltage";
++        doc["unit_of_measurement"] = "V";
++        doc["suggested_display_precision"] = 2;
++    } else if (valueType == "rssi") {
++        doc["device_class"] = "signal_strength";
++        doc["unit_of_measurement"] = "dBm";
++    }
++    
++    // Device information
++    JsonObject device = doc.createNestedObject("device");
++    device["identifiers"] = String(sensor.serialNumber, HEX);
++    device["name"] = sensor.name;
++    device["model"] = sensor.getTypeInfo().name;
++    device["manufacturer"] = "expLORA";
++    
++    // Serialize JSON to string
++    String payload;
++    serializeJson(doc, payload);
++    return payload;
++}
++
++// Helper function to capitalize first letter
++String capitalizeFirst(const String& input) {
++    if (input.length() == 0) return input;
++    String result = input;
++    result.setCharAt(0, toupper(input.charAt(0)));
++    return result;
++}
++
++// Publikování dat senzorů
++void MQTTManager::publishSensorData(int sensorIndex) {
++    // Skip if not connected
++    if (!mqttClient.connected() || !configManager.mqttEnabled) {
++        return;
++    }
++    
++    // Get sensor data
++    const SensorData* sensor = sensorManager.getSensor(sensorIndex);
++    if (!sensor || !sensor->configured) {
++        return;
++    }
++    
++    // Base topic for this sensor
++    String baseTopic = "explora/" + String(sensor->serialNumber, HEX);
++    
++    // Publish each value based on sensor type
++    if (sensor->hasTemperature()) {
++        mqttClient.publish((baseTopic + "/temperature").c_str(), 
++                          String(sensor->temperature, 2).c_str());
++    }
++    
++    if (sensor->hasHumidity()) {
++        mqttClient.publish((baseTopic + "/humidity").c_str(), 
++                          String(sensor->humidity, 2).c_str());
++    }
++    
++    if (sensor->hasPressure()) {
++        mqttClient.publish((baseTopic + "/pressure").c_str(), 
++                          String(sensor->pressure, 2).c_str());
++    }
++    
++    if (sensor->hasPPM()) {
++        mqttClient.publish((baseTopic + "/co2").c_str(), 
++                          String(int(sensor->ppm)).c_str());
++    }
++    
++    if (sensor->hasLux()) {
++        mqttClient.publish((baseTopic + "/illuminance").c_str(), 
++                          String(sensor->lux, 1).c_str());
++    }
++    
++    if (sensor->hasWindSpeed()) {
++        mqttClient.publish((baseTopic + "/wind_speed").c_str(), 
++                          String(sensor->windSpeed, 1).c_str());
++    }
++    
++    if (sensor->hasWindDirection()) {
++        mqttClient.publish((baseTopic + "/wind_direction").c_str(), 
++                          String(sensor->windDirection).c_str());
++    }
++    
++    if (sensor->hasRainAmount()) {
++        mqttClient.publish((baseTopic + "/rain_amount").c_str(), 
++                          String(sensor->rainAmount, 1).c_str());
++        mqttClient.publish((baseTopic + "/daily_rain").c_str(), 
++                          String(sensor->dailyRainTotal, 1).c_str());
++    }
++    
++    if (sensor->hasRainRate()) {
++        mqttClient.publish((baseTopic + "/rain_rate").c_str(), 
++                          String(sensor->rainRate, 1).c_str());
++    }
++    
++    // Battery voltage - available for all sensors
++    mqttClient.publish((baseTopic + "/battery").c_str(), 
++                      String(sensor->batteryVoltage, 2).c_str());
++    
++    // RSSI - available for all sensors
++    mqttClient.publish((baseTopic + "/rssi").c_str(), 
++                      String(sensor->rssi).c_str());
++    
++    logger.debug("Published MQTT data for sensor: " + sensor->name);
++}
+
+diff --git a/main.cpp b/main.cpp
+index e1fd10c..dea2c8f 100644
+--- a/main.cpp
++++ b/main.cpp
+@@ -24,6 +24,7 @@
+ // Protokol
+ #include "Protocol/LoRaProtocol.h"
+ 
++#include "Protocol/MQTTManager.h"
+ // Web rozhraní
+ #include "Web/WebServer.h"
+ #include "Web/HTMLGenerator.h"
+@@ -36,6 +37,7 @@ SPIManager* spiManager;       // Správce SPI komunikace
+ LoRaModule* loraModule;       // LoRa modul
+ SensorManager* sensorManager; // Správce senzorů
+ LoRaProtocol* loraProtocol;   // LoRa protokol
++MQTTManager* mqttManager;     // MQTT Manager
+ WebPortal* webPortal;         // Webové rozhraní
+ 
+ // Časovač pro vypnutí AP režimu
+@@ -173,7 +175,8 @@ void setup() {
+         // Inicializace webového rozhraní - bude dostupné přes AP i klienta (pokud je připojen)
+         webPortal = new WebPortal(*sensorManager, logger, 
+                                  configManager->wifiSSID, configManager->wifiPassword, 
+-                                 configManager->configMode, configManager->timezone);
++                                 configManager->configMode, configManager->mqttHost,
++                                 configManager->timezone);
+     }
+     
+     // Inicializace LoRa modulu
+@@ -188,11 +191,18 @@ void setup() {
+     // Inicializace webového portálu, pokud ještě není inicializován
+     if (!webPortal) {
+         webPortal = new WebPortal(*sensorManager, logger, 
+-                                 configManager->wifiSSID, configManager->wifiPassword, 
+-                                 configManager->configMode, configManager->timezone);
++                                configManager->wifiSSID, configManager->wifiPassword, 
++                                configManager->configMode, configManager->mqttHost,
++                                configManager->timezone);
+     }
+     
+-    if (!webPortal->init()) {
++    // Initialize MQTT Manager if WiFi is connected
++    mqttManager = new MQTTManager(*sensorManager, *configManager, logger);
++    if (!mqttManager->init()) {
++        logger.debug("MQTT Manager initialization skipped (disabled in config)");
++    }
++
++    if (!webPortal->init()) {  
+         logger.error("Failed to initialize web portal");
+     } else {
+         logger.info("Web portal initialized successfully");
+@@ -267,6 +277,12 @@ void loop() {
+         webPortal->handleClient();
+     }
+     
++    // Process MQTT communication
++    if (mqttManager && WiFi.status() == WL_CONNECTED) {
++        mqttManager->process();
++    }
++    
++    
+     // Kontrola WiFi připojení a případný reconnect
+     if (!configManager->configMode && WiFi.status() != WL_CONNECTED) {
+         unsigned long now = millis();
+@@ -298,4 +314,28 @@ void loop() {
+         #endif
+     }
+ }
++
++// Add this function to integrate the MQTT publishing with sensor updates
++// This should be called from SensorManager::updateSensorData
++bool SensorManager::updateSensorData(int index, float temperature, float humidity, float pressure,
++                                     float ppm, float lux, float batteryVoltage, int rssi,
++                                     float windSpeed, uint16_t windDirection,
++                                     float rainAmount, float rainRate) {
++    // Call the original method (keep all the existing code)
++    // ...
++
++    // After updating sensor data, publish to MQTT if connected
++    if (WiFi.status() == WL_CONNECTED && mqttManager != nullptr) {
++        mqttManager->publishSensorData(index);
++    }
++
++    return true;
++}
++```
+
+diff --git a/platformio.ini b/platformio.ini
+index xxxxxx..xxxxxx 100644
+--- a/platformio.ini
++++ b/platformio.ini
+@@ -15,3 +15,4 @@ lib_deps =
+     bblanchon/ArduinoJson @ ^6.20.0
+     esphome/AsyncTCP-esphome @ ^1.2.2
+     esphome/ESPAsyncWebServer-esphome @ ^2.1.0
++    knolleary/PubSubClient @ ^2.8

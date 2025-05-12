@@ -220,7 +220,9 @@
  .pio/libdeps/esp32-s3-devkitc-1/ArduinoJson/src/ArduinoJson.hpp \
  .pio/libdeps/esp32-s3-devkitc-1/ArduinoJson/src/ArduinoJson/Configuration.hpp \
  src/Web/../Data/SensorTypes.h src/Web/../Data/../config.h \
- src/Web/../Data/Logging.h src/Web/HTMLGenerator.h \
+ src/Web/../Data/Logging.h src/Web/../Storage/ConfigManager.h \
+ /Users/svermigo/.platformio/packages/framework-arduinoespressif32/libraries/Preferences/src/Preferences.h \
+ /Users/svermigo/.platformio/packages/framework-arduinoespressif32/libraries/LittleFS/src/LittleFS.h \
+ src/Web/HTMLGenerator.h \
  .pio/libdeps/esp32-s3-devkitc-1/ESPAsyncWebServer/src/AsyncJson.h \
- .pio/libdeps/esp32-s3-devkitc-1/ESPAsyncWebServer/src/ChunkPrint.h \
- /Users/svermigo/.platformio/packages/framework-arduinoespressif32/libraries/LittleFS/src/LittleFS.h
+ .pio/libdeps/esp32-s3-devkitc-1/ESPAsyncWebServer/src/ChunkPrint.h

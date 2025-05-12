@@ -2,7 +2,7 @@
 
 // Konstruktor
 LoRaProtocol::LoRaProtocol(LoRaModule& module, SensorManager& manager, Logger& log)
-    : loraModule(module), sensorManager(manager), logger(log) {
+    : loraModule(module), sensorManager(manager), logger(log), lastProcessedSensorIndex(-1) {
 }
 
 // Destruktor
@@ -72,11 +72,12 @@ bool LoRaProtocol::processReceivedPacket() {
     // Získání typu senzoru z dešifrovaných dat
     SensorType deviceType = static_cast<SensorType>(decryptedBuffer[1]);
     
+    lastProcessedSensorIndex = sensorIndex;
+
     // Zpracování paketu podle typu senzoru
     return processPacketByType(deviceType, decryptedBuffer, length, sensorIndex, rssi);
 }
 
-// Factory metoda pro zpracování paketu podle typu senzoru
 bool LoRaProtocol::processPacketByType(SensorType type, uint8_t *data, uint8_t len, int sensorIndex, int rssi) {
     switch (type) {
         case SensorType::BME280:
@@ -233,7 +234,7 @@ bool LoRaProtocol::processMeteoPacket(uint8_t *data, uint8_t len, int sensorInde
     float voltage = batteryRaw / 1000.0;  // mV to V
     
     // Výpis pro ladění
-    logger.debug("METEO packet: SN=0x" + String(serialNumber, HEX) + 
+    logger.debug("METEO packet: SN=" + String(serialNumber, HEX) + 
                 ", battery=" + String(voltage) + "V, values=" + String(data[7]));
     
     // Extrakce dat specifických pro METEO
@@ -327,7 +328,7 @@ int LoRaProtocol::tryDecryptWithAllKeys(uint8_t *encData, uint8_t len, uint8_t *
             if (packetSN == activeSensors[i].serialNumber) {
                 // Našli jsme shodu, vracíme index senzoru
                 logger.debug("Packet successfully decrypted with key from sensor " + 
-                           activeSensors[i].name + " (SN: 0x" + String(activeSensors[i].serialNumber, HEX) + ")");
+                           activeSensors[i].name + " (SN: " + String(activeSensors[i].serialNumber, HEX) + ")");
                 
                 // Vracíme index senzoru v globálním poli
                 return sensorManager.findSensorBySN(activeSensors[i].serialNumber);

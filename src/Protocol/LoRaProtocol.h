@@ -30,6 +30,7 @@ private:
     bool processVEML7700Packet(uint8_t *data, uint8_t len, int sensorIndex, int rssi);
     bool processMeteoPacket(uint8_t *data, uint8_t len, int sensorIndex, int rssi);
 
+    int lastProcessedSensorIndex; // Index posledně zpracovaného senzoru
 
     // Validace kontrolního součtu
     bool validateChecksum(uint8_t *buf, uint8_t len);
@@ -58,4 +59,7 @@ public:
     
     // Zkouška dešifrování se všemi známými klíči
     int tryDecryptWithAllKeys(uint8_t *encData, uint8_t len, uint8_t *decData);
+
+    // Getter pro lastProcessedSensorIndex
+    int getLastProcessedSensorIndex() const { return lastProcessedSensorIndex; }
 };

@@ -373,7 +373,7 @@ bool SensorManager::updateSensorConfig(int index, const String &name, SensorType
     int existingIndex = findSensorBySN(serialNumber);
     if (existingIndex >= 0 && existingIndex != index)
     {
-        logger.warning("Cannot update sensor config: Serial number 0x" +
+        logger.warning("Cannot update sensor config: Serial number " +
                        String(serialNumber, HEX) + " already used by sensor " +
                        sensors[existingIndex].name);
         return false;
@@ -386,7 +386,7 @@ bool SensorManager::updateSensorConfig(int index, const String &name, SensorType
     sensors[index].deviceKey = deviceKey;
     sensors[index].customUrl = customUrl;
 
-    logger.info("Updated configuration for sensor: " + name + " (SN: 0x" + String(serialNumber, HEX) + ")");
+    logger.info("Updated configuration for sensor: " + name + " (SN: " + String(serialNumber, HEX) + ")");
     saveSensors(false);
     return true;
 }

@@ -73,6 +73,14 @@
 #define NTP_SERVER "pool.ntp.org"
 #define DEFAULT_TIMEZONE "CET-1CEST,M3.5.0,M10.5.0/3"  // Central European Time with auto DST
 
+// MQTT Configuration
+#define MQTT_DEFAULT_HOST "homeassistant.local"
+#define MQTT_DEFAULT_PORT 1883
+#define MQTT_DEFAULT_USER ""
+#define MQTT_DEFAULT_PASS ""
+#define MQTT_DEFAULT_ENABLED false
+#define MQTT_RECONNECT_INTERVAL 30000 // 30 seconds in milliseconds
+#define HA_DISCOVERY_PREFIX "homeassistant"
 
 // CORS hlavičky pro API
 #define CORS_HEADER_NAME "Access-Control-Allow-Origin"

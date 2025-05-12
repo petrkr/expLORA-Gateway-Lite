@@ -52,6 +52,9 @@ public:
     // Generování stránky konfigurace
     static String generateConfigPage(const String& ssid, const String& password, bool configMode, const String& ip, const String& timezone);
     
+    // Generování stránky pro nastavení MQTT
+    static String generateMqttPage(const String& host, int port, const String& user, const String& password, bool enabled);
+
     // Generování stránky se seznamem senzorů
     static String generateSensorsPage(const std::vector<SensorData>& sensors);
     
@@ -61,7 +64,7 @@ public:
     // Generování stránky pro úpravu senzoru
     static String generateSensorEditPage(const SensorData& sensor, int index);
     
-    // Generování stránky logů
+    // Generování stránky logůstatic String generateConfigPage(const Str
     static String generateLogsPage(const LogEntry* logs, size_t logCount, LogLevel currentLevel);
     
     // Generování stránky API

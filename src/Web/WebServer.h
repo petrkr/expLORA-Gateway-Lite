@@ -6,6 +6,7 @@
 #include <DNSServer.h>
 #include "../Data/SensorManager.h"
 #include "../Data/Logging.h"
+#include "../Storage/ConfigManager.h"
 
 /**
  * Třída pro správu webového portálu
@@ -40,6 +41,8 @@ private:
     
     // Inicializace AP módu
     void setupAP();
+
+    ConfigManager& configManager;  // Reference na konfiguraci
     
     // Nastavení cest pro webový server
     void setupRoutes();
@@ -67,6 +70,8 @@ private:
     void handleLogsClear(AsyncWebServerRequest *request);
     void handleLogLevel(AsyncWebServerRequest *request);
     void handleAPI(AsyncWebServerRequest *request);
+    void handleMqtt(AsyncWebServerRequest *request);
+    void handleMqttPost(AsyncWebServerRequest *request);
     void handleReboot(AsyncWebServerRequest *request);
     void handleNotFound(AsyncWebServerRequest *request);
     
@@ -80,8 +85,8 @@ private:
     
 public:
     // Konstruktor
-    WebPortal(SensorManager& sensors, Logger& log, String& ssid, String& password, bool& configMode, String& timezone);
-    
+    WebPortal(SensorManager& sensors, Logger& log, String& ssid, String& password,
+             bool& configMode, ConfigManager& config, String& timezone);
     // Destruktor
     ~WebPortal();
     
