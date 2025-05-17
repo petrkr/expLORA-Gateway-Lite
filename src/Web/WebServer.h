@@ -1,3 +1,24 @@
+/**
+ * expLORA Gateway Lite
+ *
+ * Web portal manager header file
+ *
+ * Copyright Pajenicko s.r.o., Igor Sverma (C) 2025
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 #pragma once
 
 #include <Arduino.h>
@@ -10,47 +31,48 @@
 #include "../Protocol/MQTTManager.h"
 
 /**
- * Třída pro správu webového portálu
- * 
- * Zajišťuje webové rozhraní pro konfiguraci a monitoring zařízení.
- * Poskytuje API pro přístup k datům ze senzorů.
+ * Class for web portal management
+ *
+ * Provides a web interface for device configuration and monitoring.
+ * Offers API for accessing sensor data.
  */
-class WebPortal {
+class WebPortal
+{
 private:
     // Task handle for web server
-   //TaskHandle_t webServerTaskHandle = NULL;
-    
-    MQTTManager* mqttManager; // Reference na MQTT manager
-    
+    // TaskHandle_t webServerTaskHandle = NULL;
+
+    MQTTManager *mqttManager; // Reference to MQTT manager
+
     // Static task function for the second core
     static void webServerTask(void *parameter);
-    
+
     // Processing flag to avoid race conditions
     volatile bool isProcessing = false;
 
-    AsyncWebServer server;       // Asynchronní webový server
-    DNSServer dnsServer;         // DNS server pro captive portal
-    SensorManager& sensorManager; // Reference na správce senzorů
-    Logger& logger;              // Reference na logger
-    
-    bool isAPMode;               // Režim AP (true) nebo klient (false)
-    String apName;               // Název AP v režimu AP
-    
-    // Konfigurace zařízení - reference na externí konfiguraci
-    String& wifiSSID;
-    String& wifiPassword;
-    bool& configMode;
-    String& timezone;
-    
-    // Inicializace AP módu
+    AsyncWebServer server;        // Asynchronous web server
+    DNSServer dnsServer;          // DNS server for captive portal
+    SensorManager &sensorManager; // Reference to sensor manager
+    Logger &logger;               // Reference to logger
+
+    bool isAPMode; // AP mode (true) or client mode (false)
+    String apName; // AP name in AP mode
+
+    // Device configuration - reference to external configuration
+    String &wifiSSID;
+    String &wifiPassword;
+    bool &configMode;
+    String &timezone;
+
+    // AP mode initialization
     void setupAP();
 
-    ConfigManager& configManager;  // Reference na konfiguraci
-    
-    // Nastavení cest pro webový server
+    ConfigManager &configManager; // Reference to configuration
+
+    // Setup routes for web server
     void setupRoutes();
-    
-    // Vytvoření obsahu jednotlivých stránek
+
+    // Create content for individual pages
     String createHomePage();
     String createConfigPage();
     String createSensorsPage();
@@ -58,8 +80,8 @@ private:
     String createSensorEditPage(int index);
     String createLogsPage();
     String createAPIPage();
-    
-    // Zpracování HTTP požadavků
+
+    // Process HTTP requests
     void handleRoot(AsyncWebServerRequest *request);
     void handleConfig(AsyncWebServerRequest *request);
     void handleConfigPost(AsyncWebServerRequest *request);
@@ -77,40 +99,40 @@ private:
     void handleMqttPost(AsyncWebServerRequest *request);
     void handleReboot(AsyncWebServerRequest *request);
     void handleNotFound(AsyncWebServerRequest *request);
-    
-    // Příjem WebSocket zpráv
-    void onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, 
-                         AwsEventType type, void *arg, uint8_t *data, size_t len);
-    
-    // Odesílání aktualizací přes WebSocket
+
+    // Receive WebSocket messages
+    void onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
+                          AwsEventType type, void *arg, uint8_t *data, size_t len);
+
+    // Send updates via WebSocket
     void sendSensorUpdates();
     void sendLogUpdates();
-    
+
 public:
-    // Konstruktor
-    WebPortal(SensorManager& sensors, Logger& log, String& ssid, String& password,
-             bool& configMode, ConfigManager& config, String& timezone);
-    // Destruktor
+    // Constructor
+    WebPortal(SensorManager &sensors, Logger &log, String &ssid, String &password,
+              bool &configMode, ConfigManager &config, String &timezone);
+    // Destructor
     ~WebPortal();
-    
-    // Inicializace webového serveru
+
+    // Web server initialization
     bool init();
-    
-    // Obsluha požadavků
+
+    // Handle requests
     void handleClient();
-    
-    // Zpracování DNS požadavků (pro captive portal)
+
+    // Process DNS requests (for captive portal)
     void processDNS();
-    
-    // Přepnutí mezi režimy AP a klient
+
+    // Switch between AP and client modes
     void setAPMode(bool enable);
-    
-    // Získání aktuálního režimu
+
+    // Get current mode
     bool isInAPMode() const;
-    
-    // Restart webového serveru
+
+    // Restart web server
     void restart();
 
-    // Nastavení MQTTManager reference
-    void setMqttManager(MQTTManager* manager) { mqttManager = manager; }
+    // Set MQTTManager reference
+    void setMqttManager(MQTTManager *manager) { mqttManager = manager; }
 };

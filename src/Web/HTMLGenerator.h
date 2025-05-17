@@ -1,3 +1,24 @@
+/**
+ * expLORA Gateway Lite
+ *
+ * HTML content generator header file
+ *
+ * Copyright Pajenicko s.r.o., Igor Sverma (C) 2025
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 #pragma once
 
 #include <Arduino.h>
@@ -6,79 +27,80 @@
 #include "../Data/Logging.h"
 
 /**
- * Třída pro generování HTML obsahu
- * 
- * Zajišťuje vytváření HTML stránek pro webové rozhraní, optimalizované
- * pro použití s PSRAM (pokud je k dispozici).
+ * Class for generating HTML content
+ *
+ * Handles creation of HTML pages for web interface, optimized
+ * for use with PSRAM (if available).
  */
-class HTMLGenerator {
+class HTMLGenerator
+{
 private:
-    // Buffer pro generování HTML obsahu
-    static char* htmlBuffer;
+    // Buffer for generating HTML content
+    static char *htmlBuffer;
     static size_t htmlBufferSize;
     static bool usePSRAM;
-    
-    // Inicializace bufferu
-    static bool initBuffer();
-    
-    // Uvolnění bufferu
-    static void freeBuffer();
-    
-    // Přidání HTML úvodního kódu
-    static void addHtmlHeader(String& html, const String& title, bool isAPMode);
-    
-    // Přidání HTML koncového kódu
-    static void addHtmlFooter(String& html);
-    
-    // Přidání CSS pro stránky
-    static void addStyles(String& html);
-    
-    // Přidání JavaScript pro interaktivní prvky
-    static void addJavaScript(String& html);
-    
-    // Přidání navigace
-    static void addNavigation(String& html, const String& activePage);
-    
-public:
-    // Inicializace generátoru
-    static bool init(bool usePsram = true, size_t bufferSize = 32768);
-    
-    // Uvolnění zdrojů
-    static void deinit();
-    
-    // Generování domovské stránky
-    static String generateHomePage(const std::vector<SensorData>& sensors);
-    
-    // Generování stránky konfigurace
-    static String generateConfigPage(const String& ssid, const String& password, bool configMode, const String& ip, const String& timezone);
-    
-    // Generování stránky pro nastavení MQTT
-    static String generateMqttPage(const String& host, int port, const String& user, const String& password, bool enabled);
 
-    // Generování stránky se seznamem senzorů
-    static String generateSensorsPage(const std::vector<SensorData>& sensors);
-    
-    // Generování stránky pro přidání senzoru
+    // Buffer initialization
+    static bool initBuffer();
+
+    // Free buffer
+    static void freeBuffer();
+
+    // Add HTML opening code
+    static void addHtmlHeader(String &html, const String &title, bool isAPMode);
+
+    // Add HTML closing code
+    static void addHtmlFooter(String &html);
+
+    // Add CSS for pages
+    static void addStyles(String &html);
+
+    // Add JavaScript for interactive elements
+    static void addJavaScript(String &html);
+
+    // Add navigation
+    static void addNavigation(String &html, const String &activePage);
+
+public:
+    // Initialize generator
+    static bool init(bool usePsram = true, size_t bufferSize = 32768);
+
+    // Free resources
+    static void deinit();
+
+    // Generate home page
+    static String generateHomePage(const std::vector<SensorData> &sensors);
+
+    // Generate configuration page
+    static String generateConfigPage(const String &ssid, const String &password, bool configMode, const String &ip, const String &timezone);
+
+    // Generate MQTT settings page
+    static String generateMqttPage(const String &host, int port, const String &user, const String &password, bool enabled);
+
+    // Generate sensor list page
+    static String generateSensorsPage(const std::vector<SensorData> &sensors);
+
+    // Generate sensor add page
     static String generateSensorAddPage();
-    
-    // Generování stránky pro úpravu senzoru
-    static String generateSensorEditPage(const SensorData& sensor, int index);
-    
-    // Generování stránky logůstatic String generateConfigPage(const Str
-    static String generateLogsPage(const LogEntry* logs, size_t logCount, LogLevel currentLevel);
-    
-    // Generování stránky API
-    static String generateAPIPage(const std::vector<SensorData>& sensors);
-    
-    // Generování JSON pro API
-    static String generateAPIJson(const std::vector<SensorData>& sensors);
-    
-    // Optimalizované verze pomocí bufferu
-    static void generateSensorTable(char* buffer, size_t& maxLen, const std::vector<SensorData>& sensors);
-    static void generateLogTable(char* buffer, size_t& maxLen, const LogEntry* logs, size_t logCount);
-    
-    // Další pomocné metody
-    static String getWifiNetworkOptions(const String& currentSSID);
+
+    // Generate sensor edit page
+    static String generateSensorEditPage(const SensorData &sensor, int index);
+
+    // Generate logs page
+    static String generateLogsPage(const LogEntry *logs, size_t logCount, LogLevel currentLevel);
+
+    // Generate API page
+    static String generateAPIPage(const std::vector<SensorData> &sensors);
+
+    // Generate JSON for API
+    static String generateAPIJson(const std::vector<SensorData> &sensors);
+
+    // Optimized versions using buffer
+    static void generateSensorTable(char *buffer, size_t &maxLen, const std::vector<SensorData> &sensors);
+    static void generateLogTable(char *buffer, size_t &maxLen, const LogEntry *logs, size_t logCount);
+
+    // Additional helper methods
+    static String getWifiNetworkOptions(const String &currentSSID);
     static String getSensorTypeOptions(SensorType currentType);
     static String getLogLevelOptions(LogLevel currentLevel);
 };

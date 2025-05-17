@@ -1,3 +1,24 @@
+/**
+ * expLORA Gateway Lite
+ *
+ * Web portal implementation file
+ *
+ * Copyright Pajenicko s.r.o., Igor Sverma (C) 2025
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 #include "WebServer.h"
 #include "HTMLGenerator.h"
 #include <WiFi.h>
@@ -6,7 +27,7 @@
 #include <LittleFS.h>
 #include "../config.h"
 
-// Konstruktor
+// Constructor
 WebPortal::WebPortal(SensorManager &sensors, Logger &log, String &ssid, String &password,
                      bool &config_mode, ConfigManager &config, String &tz)
     : server(HTTP_PORT), sensorManager(sensors), logger(log), isAPMode(false),
@@ -74,7 +95,7 @@ bool WebPortal::init()
     return true;
 }
 
-// Inicializace AP módu
+// AP mode initialization
 void WebPortal::setupAP()
 {
     logger.info("Starting AP mode: " + apName);
@@ -92,7 +113,6 @@ void WebPortal::setupAP()
     logger.info("Setting up AP: " + apName);
 
     // AP configuration with 4 clients max and channel 6 (less crowded usually)
-    // bool apStarted = WiFi.softAP(apName.c_str(), "password123", 6, false, 4);
     bool apStarted = WiFi.softAP(apName.c_str());
     delay(1000); // Give AP time to fully initialize
 
@@ -116,7 +136,7 @@ void WebPortal::setupAP()
     isAPMode = true;
 }
 
-// Nastavení cest pro webový server
+// Setup routes for web server
 // Modify WebPortal::setupRoutes() in WebServer.cpp
 void WebPortal::setupRoutes()
 {
@@ -194,58 +214,58 @@ WebPortal::~WebPortal()
     dnsServer.stop();
 }
 
-// Zpracování DNS požadavků
+// Process DNS requests
 void WebPortal::processDNS()
 {
     dnsServer.processNextRequest();
-    // je volána automaticky v handleClient()
+    // called automatically in handleClient()
 }
 
-// Přepnutí mezi režimy AP a klient
+// Switch between AP and client modes
 void WebPortal::setAPMode(bool enable)
 {
     if (enable == isAPMode)
     {
-        return; // Žádná změna
+        return; // No change
     }
 
     if (enable)
     {
-        // Přepnutí do AP módu
+        // Switch to AP mode
         setupAP();
     }
     else
     {
-        // Přepnutí do klientského módu
+        // Switch to client mode
         dnsServer.stop();
         isAPMode = false;
     }
 }
 
-// Získání aktuálního režimu
+// Get current mode
 bool WebPortal::isInAPMode() const
 {
     return isAPMode;
 }
 
-// Restart webového serveru
+// Restart web server
 void WebPortal::restart()
 {
     server.end();
 
-    // Reset DNS serveru, pokud byl spuštěn
+    // Reset DNS server if it was running
     if (isAPMode)
     {
         dnsServer.stop();
     }
 
-    // Znovu inicializace
+    // Re-initialize
     init();
 }
 
-// Zpracování HTTP požadavků
+// Process HTTP requests
 
-// Kořenová stránka
+// Root page
 void WebPortal::handleRoot(AsyncWebServerRequest *request)
 {
     logger.debug("HTTP request: GET /");
@@ -257,31 +277,31 @@ void WebPortal::handleRoot(AsyncWebServerRequest *request)
         return;
     }
 
-    // Získání seznamu senzorů
+    // Get list of sensors
     std::vector<SensorData> sensorsList = sensorManager.getActiveSensors();
 
-    // Vygenerování HTML
+    // Generate HTML
     String html = HTMLGenerator::generateHomePage(sensorsList);
 
-    // Odeslání odpovědi
+    // Send response
     request->send(200, "text/html", html);
 }
 
-// Stránka konfigurace WiFi
+// WiFi configuration page
 void WebPortal::handleConfig(AsyncWebServerRequest *request)
 {
     logger.debug("HTTP request: GET /config");
 
     String currentIP = isAPMode ? WiFi.softAPIP().toString() : WiFi.localIP().toString();
 
-    // Vygenerování HTML
+    // Generate HTML
     String html = HTMLGenerator::generateConfigPage(wifiSSID, wifiPassword, configMode, currentIP, timezone);
 
-    // Odeslání odpovědi
+    // Send response
     request->send(200, "text/html", html);
 }
 
-// Zpracování formuláře konfigurace WiFi
+// Process WiFi configuration form
 void WebPortal::handleConfigPost(AsyncWebServerRequest *request)
 {
     logger.debug("HTTP request: POST /config");
@@ -344,34 +364,34 @@ void WebPortal::handleConfigPost(AsyncWebServerRequest *request)
     }
 }
 
-// Stránka se seznamem senzorů
+// Sensors list page
 void WebPortal::handleSensors(AsyncWebServerRequest *request)
 {
     logger.debug("HTTP request: GET /sensors");
 
-    // Získání seznamu senzorů
+    // Get list of sensors
     std::vector<SensorData> sensorsList = sensorManager.getActiveSensors();
 
-    // Vygenerování HTML
+    // Generate HTML
     String html = HTMLGenerator::generateSensorsPage(sensorsList);
 
-    // Odeslání odpovědi
+    // Send response
     request->send(200, "text/html", html);
 }
 
-// Stránka pro přidání senzoru
+// Sensor add page
 void WebPortal::handleSensorAdd(AsyncWebServerRequest *request)
 {
     logger.debug("HTTP request: GET /sensors/add");
 
-    // Vygenerování HTML
+    // Generate HTML
     String html = HTMLGenerator::generateSensorAddPage();
 
-    // Odeslání odpovědi
+    // Send response
     request->send(200, "text/html", html);
 }
 
-// Zpracování formuláře pro přidání senzoru
+// Process sensor add form
 void WebPortal::handleSensorAddPost(AsyncWebServerRequest *request)
 {
     logger.debug("HTTP request: POST /sensors/add");
@@ -497,35 +517,35 @@ void WebPortal::handleSensorAddPost(AsyncWebServerRequest *request)
     }
 }
 
-// Stránka pro úpravu senzoru
+// Sensor edit page
 void WebPortal::handleSensorEdit(AsyncWebServerRequest *request)
 {
     logger.debug("HTTP request: GET /sensors/edit");
 
-    // Kontrola parametru index
+    // Check index parameter
     if (request->hasParam("index"))
     {
         int index = request->getParam("index")->value().toInt();
 
-        // Získání senzoru
+        // Get sensor
         const SensorData *sensor = sensorManager.getSensor(index);
 
         if (sensor && sensor->configured)
         {
-            // Vygenerování HTML
+            // Generate HTML
             String html = HTMLGenerator::generateSensorEditPage(*sensor, index);
 
-            // Odeslání odpovědi
+            // Send response
             request->send(200, "text/html", html);
             return;
         }
     }
 
-    // Senzor nenalezen, přesměrování na stránku se seznamem senzorů
+    // Sensor not found, redirect to sensors list
     request->redirect("/sensors");
 }
 
-// Zpracování formuláře pro úpravu senzoru
+// Process sensor edit form
 void WebPortal::handleSensorEditPost(AsyncWebServerRequest *request)
 {
     logger.debug("HTTP request: POST /sensors/update");
@@ -636,17 +656,17 @@ void WebPortal::handleSensorEditPost(AsyncWebServerRequest *request)
     }
 }
 
-// Smazání senzoru
+// Delete sensor
 void WebPortal::handleSensorDelete(AsyncWebServerRequest *request)
 {
     logger.debug("HTTP request: GET /sensors/delete");
 
-    // Kontrola parametru index
+    // Check index parameter
     if (request->hasParam("index"))
     {
         int index = request->getParam("index")->value().toInt();
 
-        // Získání senzoru
+        // Get sensor
         const SensorData *sensor = sensorManager.getSensor(index);
 
         if (sensor && sensor->configured)
@@ -654,7 +674,7 @@ void WebPortal::handleSensorDelete(AsyncWebServerRequest *request)
             String name = sensor->name;
             uint32_t serialNumber = sensor->serialNumber;
 
-            // Smazání senzoru
+            // Delete sensor
             bool success = sensorManager.deleteSensor(index);
 
             if (success)
@@ -679,57 +699,57 @@ void WebPortal::handleSensorDelete(AsyncWebServerRequest *request)
         }
     }
 
-    // Přesměrování na stránku se seznamem senzorů
+    // Redirect to sensors list
     request->redirect("/sensors");
 }
 
-// Stránka logů
+// Logs page
 void WebPortal::handleLogs(AsyncWebServerRequest *request)
 {
     logger.debug("HTTP request: GET /logs");
 
-    // Získání logů
+    // Get logs
     size_t logCount = 0;
     const LogEntry *logs = logger.getLogs(logCount);
 
-    // Vygenerování HTML
+    // Generate HTML
     String html = HTMLGenerator::generateLogsPage(logs, logCount, logger.getLogLevel());
 
-    // Odeslání odpovědi
+    // Send response
     request->send(200, "text/html", html);
 }
 
-// Vymazání logů
+// Clear logs
 void WebPortal::handleLogsClear(AsyncWebServerRequest *request)
 {
     logger.debug("HTTP request: GET /logs/clear");
 
-    // Vymazání logů
+    // Clear logs
     logger.clearLogs();
 
     logger.info("Memory after log clear - Free heap: " + String(ESP.getFreeHeap()) +
                 " bytes, Largest block: " + String(ESP.getMaxAllocHeap()) + " bytes");
 
-    // Přesměrování zpět na stránku logů
+    // Redirect back to logs page
     request->redirect("/logs");
 }
 
-// Nastavení úrovně logování
+// Set logging level
 void WebPortal::handleLogLevel(AsyncWebServerRequest *request)
 {
     logger.debug("HTTP request: POST /logs/level");
 
-    // Kontrola parametru level
+    // Check level parameter
     if (request->hasParam("level", true))
     {
         String levelStr = request->getParam("level", true)->value();
         LogLevel level = logger.levelFromString(levelStr);
 
-        // Nastavení nové úrovně
+        // Set new level
         logger.setLogLevel(level);
     }
 
-    // Přesměrování zpět na stránku logů
+    // Redirect back to logs page
     request->redirect("/logs");
 }
 
@@ -795,23 +815,23 @@ void WebPortal::handleMqttPost(AsyncWebServerRequest *request)
     }
 }
 
-// API pro získání dat senzorů
+// API for retrieving sensor data
 void WebPortal::handleAPI(AsyncWebServerRequest *request)
 {
     logger.debug("HTTP request: GET /api");
 
-    // Kontrola parametru format
+    // Check format parameter
     String format = request->hasParam("format") ? request->getParam("format")->value() : "html";
 
-    // Kontrola parametru sensor
+    // Check sensor parameter
     String sensorParam = request->hasParam("sensor") ? request->getParam("sensor")->value() : "";
 
-    // Získání seznamu senzorů
+    // Get list of sensors
     std::vector<SensorData> sensorsList;
 
     if (sensorParam.length() > 0)
     {
-        // Filtrování podle konkrétního senzoru
+        // Filter by specific sensor
         uint32_t serialNumber = strtoul(sensorParam.c_str(), NULL, 16);
         int sensorIndex = sensorManager.findSensorBySN(serialNumber);
 
@@ -826,16 +846,16 @@ void WebPortal::handleAPI(AsyncWebServerRequest *request)
     }
     else
     {
-        // Všechny senzory
+        // All sensors
         sensorsList = sensorManager.getActiveSensors();
     }
 
     if (format.equalsIgnoreCase("json"))
     {
-        // JSON formát
+        // JSON format
         String jsonOutput = HTMLGenerator::generateAPIJson(sensorsList);
 
-        // Odeslání JSON odpovědi
+        // Send JSON response
         AsyncResponseStream *response = request->beginResponseStream("application/json");
         response->print(jsonOutput);
         response->addHeader(CORS_HEADER_NAME, CORS_HEADER_VALUE);
@@ -843,7 +863,7 @@ void WebPortal::handleAPI(AsyncWebServerRequest *request)
     }
     else if (format.equalsIgnoreCase("csv"))
     {
-        // CSV formát
+        // CSV format
         AsyncResponseStream *response = request->beginResponseStream("text/csv");
         response->print("name,type,serialNumber,lastSeen,temperature,humidity,pressure,ppm,lux,batteryVoltage,rssi\r\n");
 
@@ -879,34 +899,34 @@ void WebPortal::handleAPI(AsyncWebServerRequest *request)
     }
     else if (format.equalsIgnoreCase("html"))
     {
-        // HTML formát (dokumentace API)
+        // HTML format (API documentation)
         String html = HTMLGenerator::generateAPIPage(sensorsList);
         request->send(200, "text/html", html);
     }
     else
     {
-        // Neznámý formát
+        // Unknown format
         request->send(400, "text/plain", "Invalid format parameter. Supported formats: json, csv, html");
     }
 }
 
-// Restart zařízení
+// Restart device
 void WebPortal::handleReboot(AsyncWebServerRequest *request)
 {
     logger.info("HTTP request: GET /reboot - Rebooting device");
 
-    // Odeslání potvrzení
+    // Send confirmation
     request->send(200, "text/html",
                   "<html><head><meta http-equiv='refresh' content='10;url=/'></head>"
                   "<body><h1>Rebooting</h1>"
                   "<p>The device is rebooting. You will be redirected in 10 seconds...</p></body></html>");
 
-    // Restart ESP32 po 500ms (aby se stihla odeslat odpověď)
+    // Restart ESP32 after 500ms (to allow response to be sent)
     delay(500);
     ESP.restart();
 }
 
-// Obsluha neznámých stránek
+// Handle unknown pages
 // In WebServer.cpp, modify the handleNotFound method
 // Update WebPortal::handleNotFound in WebServer.cpp
 void WebPortal::handleNotFound(AsyncWebServerRequest *request)

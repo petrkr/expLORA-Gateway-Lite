@@ -1,77 +1,106 @@
+/**
+ * expLORA Gateway Lite
+ *
+ * Sensor types definitions header file
+ *
+ * Copyright Pajenicko s.r.o., Igor Sverma (C) 2025
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 #pragma once
 
 #include <Arduino.h>
 #include "../config.h"
 
 /**
- * Definice typů senzorů a jejich vlastností
- * 
- * Tento soubor obsahuje definice všech podporovaných typů senzorů včetně jejich
- * specifických vlastností a schopností. Při přidání nového typu senzoru stačí
- * definovat jeho vlastnosti zde a přidat implementaci jeho zpracování.
+ * Definition of sensor types and their properties
+ *
+ * This file contains definitions for all supported sensor types including their
+ * specific properties and capabilities. When adding a new sensor type, simply
+ * define its properties here and add implementation for its processing.
  */
 
-// Enumerace pro typy senzorů - shodné s definicemi v config.h
-enum class SensorType : uint8_t {
+// Enumeration for sensor types - matching the definitions in config.h
+enum class SensorType : uint8_t
+{
     UNKNOWN = SENSOR_TYPE_UNKNOWN,
-    BME280 = SENSOR_TYPE_BME280,     // Teplota, vlhkost, tlak
-    SCD40 = SENSOR_TYPE_SCD40,       // Teplota, vlhkost, CO2
-    VEML7700 = SENSOR_TYPE_VEML7700, // Světelný senzor (LUX)
-    METEO = SENSOR_TYPE_METEO,       // Meteorologická stanice
-    // Přidejte další typy senzorů zde...
+    BME280 = SENSOR_TYPE_BME280,     // Temperature, humidity, pressure
+    SCD40 = SENSOR_TYPE_SCD40,       // Temperature, humidity, CO2
+    VEML7700 = SENSOR_TYPE_VEML7700, // Light sensor (LUX)
+    METEO = SENSOR_TYPE_METEO,       // Meteorological station
+    // Add more sensor types here...
 };
 
-// Struktura pro informace o typu senzoru
-struct SensorTypeInfo {
-    SensorType type;               // Typ senzoru (enum)
-    const char* name;              // Název typu senzoru
-    uint8_t expectedDataLength;    // Očekávaná délka dat v paketu (bez hlavičky a checksum)
-    uint8_t packetDataOffset;      // Offset, kde začínají data senzoru v paketu
-    bool hasTemperature;           // Zda senzor poskytuje teplotu
-    bool hasHumidity;              // Zda senzor poskytuje vlhkost
-    bool hasPressure;              // Zda senzor poskytuje tlak
-    bool hasPPM;                   // Zda senzor poskytuje PPM (CO2)
-    bool hasLux;                   // Zda senzor poskytuje osvětlení (lux)
-    bool hasWindSpeed;             // Zda senzor poskytuje rychlost větru
-    bool hasWindDirection;         // Zda senzor poskytuje směr větru
-    bool hasRainAmount;            // Zda senzor poskytuje množství srážek
-    bool hasRainRate;              // Zda senzor poskytuje intenzitu srážek
-    // Možnost přidat další parametry podle potřeby
+// Structure for sensor type information
+struct SensorTypeInfo
+{
+    SensorType type;            // Sensor type (enum)
+    const char *name;           // Sensor type name
+    uint8_t expectedDataLength; // Expected data length in packet (excluding header and checksum)
+    uint8_t packetDataOffset;   // Offset where sensor data begins in the packet
+    bool hasTemperature;        // Whether sensor provides temperature
+    bool hasHumidity;           // Whether sensor provides humidity
+    bool hasPressure;           // Whether sensor provides pressure
+    bool hasPPM;                // Whether sensor provides PPM (CO2)
+    bool hasLux;                // Whether sensor provides illumination (lux)
+    bool hasWindSpeed;          // Whether sensor provides wind speed
+    bool hasWindDirection;      // Whether sensor provides wind direction
+    bool hasRainAmount;         // Whether sensor provides rain amount
+    bool hasRainRate;           // Whether sensor provides rain intensity
+    // Possibility to add more parameters as needed
 };
 
-// Tabulka definic typů senzorů - pro snadné vyhledávání a přidávání nových typů
+// Table of sensor type definitions - for easy lookup and adding new types
 const SensorTypeInfo SENSOR_TYPE_DEFINITIONS[] = {
     // type,                 name,       dataLen, offset, temp,  hum,   press, ppm,   lux,   windS, windD, rain,  rainR
-    {SensorType::UNKNOWN,   "Unknown",      0,     7,    false, false, false, false, false, false, false, false, false},
-    {SensorType::BME280,    "CLIMA",       6,     7,    true,  true,  true,  false, false, false, false, false, false},
-    {SensorType::SCD40,     "CARBON",        6,     7,    true,  true,  false, true,  false, false, false, false, false},
-    {SensorType::METEO,     "METEO",       14,     7,    true,  true,  true,  false, false, true,  true,  true,  true},
+    {SensorType::UNKNOWN, "Unknown",  0, 7, false, false, false, false, false, false, false, false, false},
+    {SensorType::BME280,    "CLIMA",  6, 7, true,  true,  true,  false, false, false, false, false, false},
+    {SensorType::SCD40,    "CARBON",  6, 7, true,  true,  false,  true, false, false, false, false, false},
+    {SensorType::METEO,     "METEO", 14, 7, true,  true,  true,  false, false,  true,  true,  true,  true},
     //{SensorType::VEML7700,  "VEML7700",     4,     7,    false, false, false, false, true,  false, false, false, false},
-    // Přidejte další typy senzorů zde v budoucnosti...
+    // Add more sensor types here in the future...
 };
 
-// Pomocná funkce pro získání informací o typu senzoru podle enum hodnoty
-inline const SensorTypeInfo& getSensorTypeInfo(SensorType type) {
-    for (const auto& info : SENSOR_TYPE_DEFINITIONS) {
-        if (info.type == type) {
+// Helper function to get information about sensor type by enum value
+inline const SensorTypeInfo &getSensorTypeInfo(SensorType type)
+{
+    for (const auto &info : SENSOR_TYPE_DEFINITIONS)
+    {
+        if (info.type == type)
+        {
             return info;
         }
     }
-    return SENSOR_TYPE_DEFINITIONS[0]; // Vrátí UNKNOWN, pokud typ není nalezen
+    return SENSOR_TYPE_DEFINITIONS[0]; // Returns UNKNOWN if type is not found
 }
 
-// Pomocná funkce pro získání informací o typu senzoru podle uint8_t hodnoty
-inline const SensorTypeInfo& getSensorTypeInfo(uint8_t typeValue) {
+// Helper function to get information about sensor type by uint8_t value
+inline const SensorTypeInfo &getSensorTypeInfo(uint8_t typeValue)
+{
     return getSensorTypeInfo(static_cast<SensorType>(typeValue));
 }
 
-// Pomocná funkce pro získání enum SensorType z uint8_t hodnoty
-inline SensorType sensorTypeFromValue(uint8_t value) {
+// Helper function to get enum SensorType from uint8_t value
+inline SensorType sensorTypeFromValue(uint8_t value)
+{
     return static_cast<SensorType>(value);
 }
 
-// Převod SensorType na string pro debugging a logování
-inline String sensorTypeToString(SensorType type) {
-    const SensorTypeInfo& info = getSensorTypeInfo(type);
+// Convert SensorType to string for debugging and logging
+inline String sensorTypeToString(SensorType type)
+{
+    const SensorTypeInfo &info = getSensorTypeInfo(type);
     return String(info.name);
 }

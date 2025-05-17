@@ -1,3 +1,24 @@
+/**
+ * expLORA Gateway Lite
+ *
+ * MQTT communication manager header file
+ *
+ * Copyright Pajenicko s.r.o., Igor Sverma (C) 2025
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 #pragma once
 
 #include <Arduino.h>
@@ -9,60 +30,61 @@
 #include "Storage/ConfigManager.h"
 
 /**
- * Třída pro správu MQTT komunikace s Home Assistant
- * 
- * Zajišťuje automatickou detekci senzorů v Home Assistant pomocí MQTT discovery
- * a pravidelné publikování dat ze senzorů.
+ * Class for managing MQTT communication with Home Assistant
+ *
+ * Handles automatic sensor detection in Home Assistant using MQTT discovery
+ * and regular publishing of sensor data.
  */
-class MQTTManager {
+class MQTTManager
+{
 private:
-    WiFiClient wifiClient;       // WiFi klient pro MQTT
-    PubSubClient mqttClient;     // MQTT klient
-    SensorManager& sensorManager; // Reference na správce senzorů
-    ConfigManager& configManager; // Reference na konfiguraci
-    Logger& logger;               // Reference na logger
-    
-    String clientId;              // MQTT Client ID
-    unsigned long lastReconnectAttempt; // Čas posledního pokusu o připojení
-    unsigned long lastDiscoveryUpdate;  // Čas poslední aktualizace discovery
-    
-    // Připojení k MQTT brokeru
+    WiFiClient wifiClient;        // WiFi client for MQTT
+    PubSubClient mqttClient;      // MQTT client
+    SensorManager &sensorManager; // Reference to sensor manager
+    ConfigManager &configManager; // Reference to configuration
+    Logger &logger;               // Reference to logger
+
+    String clientId;                    // MQTT Client ID
+    unsigned long lastReconnectAttempt; // Time of last connection attempt
+    unsigned long lastDiscoveryUpdate;  // Time of last discovery update
+
+    // Connect to MQTT broker
     bool connect();
-    
-    // Vytvoření discovery tématu pro senzor
-    String buildDiscoveryTopic(const SensorData& sensor, const String& valueType);
-    
-    // Vytvoření konfiguračního JSON pro Home Assistant discovery
-    String buildDiscoveryJson(const SensorData& sensor, const String& valueType, const String& stateTopic);
+
+    // Create discovery topic for sensor
+    String buildDiscoveryTopic(const SensorData &sensor, const String &valueType);
+
+    // Create configuration JSON for Home Assistant discovery
+    String buildDiscoveryJson(const SensorData &sensor, const String &valueType, const String &stateTopic);
 
     // Helper function to capitalize first letter
-    String capitalizeFirst(const String& input);
-    
+    String capitalizeFirst(const String &input);
+
 public:
-    // Konstruktor
-    MQTTManager(SensorManager& sensors, ConfigManager& config, Logger& log);
-    
-    // Inicializace
+    // Constructor
+    MQTTManager(SensorManager &sensors, ConfigManager &config, Logger &log);
+
+    // Initialization
     bool init();
-    
-    // Zpracování MQTT komunikace (volat v hlavní smyčce)
+
+    // Process MQTT communication (call in main loop)
     void process();
-    
-    // Publikování discovery konfigurace pro senzory
+
+    // Publish discovery configuration for sensors
     void publishDiscovery();
-    
-    // Publikování dat senzorů
+
+    // Publish sensor data
     void publishSensorData(int sensorIndex);
 
-    // Publikování discovery pro konkrétní senzor
+    // Publish discovery for specific sensor
     void publishDiscoveryForSensor(int sensorIndex);
 
-    // Odstranění discovery pro smazaný senzor
+    // Remove discovery for deleted sensor
     void removeDiscoveryForSensor(uint32_t serialNumber);
-    
-    // Kontrola připojení
+
+    // Check connection
     bool isConnected();
-    
-    // Odpojení od MQTT brokeru
+
+    // Disconnect from MQTT broker
     void disconnect();
 };

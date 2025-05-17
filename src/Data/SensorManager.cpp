@@ -1,37 +1,76 @@
+/**
+ * expLORA Gateway Lite
+ *
+ * Sensor manager implementation file
+ *
+ * Copyright Pajenicko s.r.o., Igor Sverma (C) 2025
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 #include "SensorManager.h"
 #include <ArduinoJson.h>
 #include <LittleFS.h>
 #include <HTTPClient.h>
 
-// Konstruktor
+// Constructor
 SensorManager::SensorManager(Logger &log, const char *file)
     : sensorCount(0), logger(log), sensorsFile(file)
 {
 }
 
-// Destruktor
+// Destructor
 SensorManager::~SensorManager()
 {
-    // Nic speciálního není potřeba uvolňovat, všechny objekty se uvolní samy
+    // Nothing special needs to be released, all objects will be released automatically
 }
 
-// Inicializace správce senzorů
+// Sensor manager initialization
 bool SensorManager::init()
 {
     logger.info("Initializing sensor manager");
     return loadSensors();
 }
 
-// Přidání nového senzoru
+// Constants for pressure conversion
+#define G 9.80665   // gravitational acceleration [m/s^2]
+#define M 0.0289644 // molar mass of air [kg/mol]
+#define R 8.3144598 // universal gas constant [J/(mol·K)]
+#define L 0.0065    // temperature gradient [K/m]
+
+// Convert relative pressure to absolute pressure
+double SensorManager::relativeToAbsolutePressure(double p_rel_hpa, int altitude_m, double temp_c)
+{
+    if (altitude_m == 0)
+    {
+        return p_rel_hpa;
+    }
+    double T = temp_c + 273.15;
+    double exponent = (G * M) / (R * L);
+    return p_rel_hpa / pow(1 - (L * altitude_m) / T, exponent);
+}
+
+// Add a new sensor
 int SensorManager::addSensor(SensorType deviceType, uint32_t serialNumber, uint32_t deviceKey, const String &name)
 {
     std::lock_guard<std::mutex> lock(sensorMutex);
 
-    // Kontrola, zda senzor již existuje
+    // Check if sensor already exists
     int existingIndex = findSensorBySN(serialNumber);
     if (existingIndex >= 0)
     {
-        // Aktualizace existujícího senzoru
+        // Update existing sensor
         sensors[existingIndex].deviceType = deviceType;
         sensors[existingIndex].deviceKey = deviceKey;
         sensors[existingIndex].name = name;
@@ -42,14 +81,14 @@ int SensorManager::addSensor(SensorType deviceType, uint32_t serialNumber, uint3
         return existingIndex;
     }
 
-    // Kontrola, zda máme ještě místo
+    // Check if we still have space
     if (sensorCount >= MAX_SENSORS)
     {
         logger.error("Failed to add sensor: maximum number of sensors reached");
         return -1;
     }
 
-    // Najít první volné místo
+    // Find first free slot
     int newIndex = -1;
     for (size_t i = 0; i < MAX_SENSORS; i++)
     {
@@ -60,7 +99,7 @@ int SensorManager::addSensor(SensorType deviceType, uint32_t serialNumber, uint3
         }
     }
 
-    // Pokud není volné místo, použijeme poslední index
+    // If no free slot, use the last index
     if (newIndex == -1)
     {
         newIndex = sensorCount;
@@ -71,7 +110,7 @@ int SensorManager::addSensor(SensorType deviceType, uint32_t serialNumber, uint3
         sensorCount = newIndex + 1;
     }
 
-    // Inicializace nového senzoru
+    // Initialize new sensor
     sensors[newIndex].deviceType = deviceType;
     sensors[newIndex].serialNumber = serialNumber;
     sensors[newIndex].deviceKey = deviceKey;
@@ -92,7 +131,7 @@ int SensorManager::addSensor(SensorType deviceType, uint32_t serialNumber, uint3
     return newIndex;
 }
 
-// Nalezení senzoru podle sériového čísla
+// Find sensor by serial number
 int SensorManager::findSensorBySN(uint32_t serialNumber)
 {
     for (size_t i = 0; i < sensorCount; i++)
@@ -105,7 +144,7 @@ int SensorManager::findSensorBySN(uint32_t serialNumber)
     return -1;
 }
 
-// Aktualizace dat senzoru
+// Update sensor data
 bool SensorManager::updateSensor(int index, const SensorData &data)
 {
     std::lock_guard<std::mutex> lock(sensorMutex);
@@ -116,7 +155,7 @@ bool SensorManager::updateSensor(int index, const SensorData &data)
         return false;
     }
 
-    // Aktualizace dat při zachování konfigurace
+    // Update data while preserving configuration
     sensors[index].deviceType = data.deviceType;
     sensors[index].temperature = data.temperature;
     sensors[index].humidity = data.humidity;
@@ -130,7 +169,7 @@ bool SensorManager::updateSensor(int index, const SensorData &data)
     return true;
 }
 
-// Aktualizace dat senzoru podle typu
+// Update sensor data by type
 bool SensorManager::updateSensorData(int index, float temperature, float humidity, float pressure,
                                      float ppm, float lux, float batteryVoltage, int rssi,
                                      float windSpeed, uint16_t windDirection,
@@ -235,7 +274,18 @@ bool SensorManager::updateSensorData(int index, float temperature, float humidit
         logger.debug(correctionLog);
     }
 
-    // Aktualizujeme pouze relevantní hodnoty podle typu senzoru
+    // Adjust pressure for altitude
+    // Only adjust if the sensor has pressure capability and altitude is set
+    if (sensors[index].hasPressure() && sensors[index].altitude > 0)
+    {
+        float adjustedPressure = relativeToAbsolutePressure(pressure, sensors[index].altitude, temperature);
+        logger.debug("Adjusted pressure from " + String(pressure, 2) + " hPa to " +
+                     String(adjustedPressure, 2) + " hPa at altitude " +
+                     String(sensors[index].altitude) + " m");
+        pressure = adjustedPressure;
+    }
+
+    // Update only relevant values according to sensor type
     if (sensors[index].hasTemperature())
     {
         sensors[index].temperature = temperature;
@@ -261,7 +311,7 @@ bool SensorManager::updateSensorData(int index, float temperature, float humidit
         sensors[index].lux = lux;
     }
 
-    // Meteorologická data
+    // Meteorological data
     if (sensors[index].hasWindSpeed())
     {
         sensors[index].windSpeed = windSpeed;
@@ -276,22 +326,22 @@ bool SensorManager::updateSensorData(int index, float temperature, float humidit
     {
         sensors[index].rainAmount = rainAmount;
 
-        // Kontrola, zda je potřeba resetovat denní úhrn (nový den)
+        // Check if we need to reset daily total (new day)
         if (Logger::isTimeInitialized())
-        { // Použití metody z Logger
-            // Získáme aktuální čas
+        { // Using method from Logger
+            // Get current time
             struct tm timeinfo;
             time_t now;
             time(&now);
 
             if (getLocalTime(&timeinfo))
             {
-                // Vytvoříme časové značky pro porovnání datumů
-                // Datum posledního resetu
+                // Create timestamps for comparing dates
+                // Date of last reset
                 struct tm lastResetTime;
                 localtime_r((time_t *)&sensors[index].lastRainReset, &lastResetTime);
 
-                // Pokud poslední reset byl v jiný den než dnes, resetujeme počítadlo
+                // If last reset was on a different day than today, reset the counter
                 if (sensors[index].lastRainReset == 0 ||
                     lastResetTime.tm_mday != timeinfo.tm_mday ||
                     lastResetTime.tm_mon != timeinfo.tm_mon ||
@@ -305,7 +355,7 @@ bool SensorManager::updateSensorData(int index, float temperature, float humidit
             }
         }
 
-        // Přidáme aktuální množství srážek k dennímu úhrnu
+        // Add current rain amount to daily total
         sensors[index].dailyRainTotal += rainAmount;
     }
 
@@ -314,7 +364,7 @@ bool SensorManager::updateSensorData(int index, float temperature, float humidit
         sensors[index].rainRate = rainRate;
     }
 
-    // Obecná data aktualizujeme vždy
+    // Always update general data
     sensors[index].batteryVoltage = batteryVoltage;
     sensors[index].rssi = rssi;
     sensors[index].lastSeen = millis();
@@ -384,7 +434,7 @@ bool SensorManager::forwardSensorData(int index)
         url.replace("*LUX*", String(sensors[index].lux, 1));
     }
 
-    // Přidání placeholderů pro METEO data
+    // Added placeholders for METEO data
     if (sensors[index].hasWindSpeed())
     {
         url.replace("*WIND_SPEED*", String(sensors[index].windSpeed, 1));
@@ -396,7 +446,7 @@ bool SensorManager::forwardSensorData(int index)
     if (sensors[index].hasRainAmount())
     {
         url.replace("*RAIN*", String(sensors[index].rainAmount, 1));
-        url.replace("*DAILY_RAIN*", String(sensors[index].dailyRainTotal, 1)); // Nový placeholder
+        url.replace("*DAILY_RAIN*", String(sensors[index].dailyRainTotal, 1)); // New placeholder
     }
     if (sensors[index].hasRainRate())
     {
@@ -446,7 +496,6 @@ bool SensorManager::forwardSensorData(int index)
     return (httpCode == HTTP_CODE_OK);
 }
 
-// Aktualizace konfigurace senzoru
 // Update sensor configuration
 bool SensorManager::updateSensorConfig(int index, const String &name, SensorType deviceType,
                                        uint32_t serialNumber, uint32_t deviceKey,
@@ -498,7 +547,7 @@ bool SensorManager::updateSensorConfig(int index, const String &name, SensorType
     return true;
 }
 
-// Smazání senzoru
+// Delete sensor
 bool SensorManager::deleteSensor(int index)
 {
     std::lock_guard<std::mutex> lock(sensorMutex);
@@ -512,7 +561,7 @@ bool SensorManager::deleteSensor(int index)
     String name = sensors[index].name;
     uint32_t serialNumber = sensors[index].serialNumber;
 
-    // Označíme jako nekonfigurovaný namísto fyzického odstranění
+    // Mark as unconfigured instead of physically removing
     sensors[index].configured = false;
 
     logger.info("Deleted sensor: " + name + " (SN: " + String(serialNumber, HEX) + ")");
@@ -520,13 +569,13 @@ bool SensorManager::deleteSensor(int index)
     return true;
 }
 
-// Získání počtu senzorů
+// Get number of sensors
 size_t SensorManager::getSensorCount() const
 {
     return sensorCount;
 }
 
-// Získání senzoru podle indexu (const verze)
+// Get sensor by index (const version)
 const SensorData *SensorManager::getSensor(int index) const
 {
     if (index < 0 || index >= sensorCount || !sensors[index].configured)
@@ -536,7 +585,7 @@ const SensorData *SensorManager::getSensor(int index) const
     return &sensors[index];
 }
 
-// Získání senzoru podle indexu (non-const verze)
+// Get sensor by index (non-const version)
 SensorData *SensorManager::getSensor(int index)
 {
     if (index < 0 || index >= sensorCount || !sensors[index].configured)
@@ -546,7 +595,7 @@ SensorData *SensorManager::getSensor(int index)
     return &sensors[index];
 }
 
-// Získání seznamu všech senzorů
+// Get list of all sensors
 std::vector<SensorData> SensorManager::getAllSensors() const
 {
     std::lock_guard<std::mutex> lock(sensorMutex);
@@ -559,7 +608,7 @@ std::vector<SensorData> SensorManager::getAllSensors() const
     return result;
 }
 
-// Získání seznamu všech aktivních senzorů (nakonfigurovaných)
+// Get list of all active sensors (configured)
 std::vector<SensorData> SensorManager::getActiveSensors() const
 {
     std::lock_guard<std::mutex> lock(sensorMutex);
@@ -575,7 +624,7 @@ std::vector<SensorData> SensorManager::getActiveSensors() const
     return result;
 }
 
-// Uložení konfigurace senzorů do souboru
+// Save sensor configuration to file
 bool SensorManager::saveSensors(bool lockMutex)
 {
     if (lockMutex)
@@ -583,7 +632,7 @@ bool SensorManager::saveSensors(bool lockMutex)
         std::lock_guard<std::mutex> lock(sensorMutex);
     }
 
-    // Otevření souboru pro zápis
+    // Open file for writing
     File file = LittleFS.open(sensorsFile, "w");
     if (!file)
     {
@@ -591,11 +640,11 @@ bool SensorManager::saveSensors(bool lockMutex)
         return false;
     }
 
-    // Vytvoření JSON dokumentu
-    DynamicJsonDocument doc(4096); // Dostatečně velký buffer
+    // Create JSON document
+    DynamicJsonDocument doc(4096); // Sufficiently large buffer
     JsonArray sensorArray = doc.createNestedArray("sensors");
 
-    // Přidání senzorů do JSON
+    // Add sensors to JSON
     for (size_t i = 0; i < sensorCount; i++)
     {
         if (sensors[i].configured)
@@ -608,7 +657,7 @@ bool SensorManager::saveSensors(bool lockMutex)
             sensor["customUrl"] = sensors[i].customUrl;
             sensor["altitude"] = sensors[i].altitude;
 
-            // Uložíme i denní úhrn srážek a čas posledního resetu
+            // Also save daily rain total and time of last reset
             if (sensors[i].hasRainAmount())
             {
                 sensor["dailyRainTotal"] = sensors[i].dailyRainTotal;
@@ -627,7 +676,7 @@ bool SensorManager::saveSensors(bool lockMutex)
         }
     }
     logger.info("Serializing sensors to JSON");
-    // Serializace JSON do souboru
+    // Serialize JSON to file
     if (serializeJson(doc, file) == 0)
     {
         logger.info("Failed to write sensors to file");
@@ -640,26 +689,26 @@ bool SensorManager::saveSensors(bool lockMutex)
     return true;
 }
 
-// Načtení konfigurace senzorů ze souboru
+// Load sensor configuration from file
 bool SensorManager::loadSensors()
 {
     std::lock_guard<std::mutex> lock(sensorMutex);
 
-    // Reset počtu senzorů
+    // Reset sensor count
     sensorCount = 0;
     for (size_t i = 0; i < MAX_SENSORS; i++)
     {
         sensors[i].configured = false;
     }
 
-    // Kontrola, zda soubor existuje
+    // Check if file exists
     if (!LittleFS.exists(sensorsFile))
     {
         logger.info("Sensors file not found: " + String(sensorsFile) + ", starting with empty configuration");
-        return true; // Není to chyba, prostě začneme s prázdnou konfigurací
+        return true; // Not an error, we just start with an empty configuration
     }
 
-    // Otevření souboru pro čtení
+    // Open file for reading
     File file = LittleFS.open(sensorsFile, "r");
     if (!file)
     {
@@ -667,10 +716,10 @@ bool SensorManager::loadSensors()
         return false;
     }
 
-    // Vytvoření JSON dokumentu
-    DynamicJsonDocument doc(4096); // Dostatečně velký buffer
+    // Create JSON document
+    DynamicJsonDocument doc(4096); // Sufficiently large buffer
 
-    // Deserializace JSON ze souboru
+    // Deserialize JSON from file
     DeserializationError error = deserializeJson(doc, file);
     file.close();
 
@@ -680,7 +729,7 @@ bool SensorManager::loadSensors()
         return false;
     }
 
-    // Načtení senzorů z JSON
+    // Load sensors from JSON
     JsonArray sensorArray = doc["sensors"].as<JsonArray>();
     for (JsonObject sensorObj : sensorArray)
     {
@@ -693,7 +742,7 @@ bool SensorManager::loadSensors()
             String name = sensorObj["name"].as<String>();
             String customUrl = sensorObj["customUrl"].as<String>();
 
-            // Vytvoření senzoru
+            // Create sensor
             sensors[sensorCount].deviceType = deviceType;
             sensors[sensorCount].serialNumber = serialNumber;
             sensors[sensorCount].deviceKey = deviceKey;
@@ -709,7 +758,7 @@ bool SensorManager::loadSensors()
             sensors[sensorCount].rssi = 0;
             sensors[sensorCount].configured = true;
 
-            // Načtení denního úhrnu srážek, pokud existuje
+            // Load daily rain total if it exists
             if (sensorObj.containsKey("dailyRainTotal"))
             {
                 sensors[sensorCount].dailyRainTotal = sensorObj["dailyRainTotal"].as<float>();
@@ -719,7 +768,7 @@ bool SensorManager::loadSensors()
                 sensors[sensorCount].dailyRainTotal = 0.0f;
             }
 
-            // Načtení času posledního resetu, pokud existuje
+            // Load time of last reset if it exists
             if (sensorObj.containsKey("lastRainReset"))
             {
                 sensors[sensorCount].lastRainReset = sensorObj["lastRainReset"].as<unsigned long>();

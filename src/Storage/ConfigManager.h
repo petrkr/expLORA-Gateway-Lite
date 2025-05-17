@@ -1,3 +1,24 @@
+/**
+ * expLORA Gateway Lite
+ *
+ * Configuration manager header file
+ *
+ * Copyright Pajenicko s.r.o., Igor Sverma (C) 2025
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 #pragma once
 
 #include <Arduino.h>
@@ -9,85 +30,86 @@
 #include "../config.h"
 
 /**
- * Třída pro správu konfigurace zařízení
- * 
- * Zajišťuje ukládání a načítání konfigurace ze dvou zdrojů:
- * 1. LittleFS - pro běžnou konfiguraci, která se resetuje při aktualizaci firmwaru
- * 2. Preferences - pro persistentní konfiguraci, která přežije aktualizaci firmwaru
+ * Class for device configuration management
+ *
+ * Handles saving and loading configuration from two sources:
+ * 1. LittleFS - for regular configuration that is reset during firmware updates
+ * 2. Preferences - for persistent configuration that survives firmware updates
  */
-class ConfigManager {
+class ConfigManager
+{
 private:
-    Logger& logger;              // Reference na logger
-    Preferences preferences;     // Pro persistentní konfiguraci
-    bool preferencesInitialized; // Příznak inicializace Preferences
-    
-    // Konfigurační soubory
-    const char* configFile;      // Soubor s konfigurací
-    
-    // Načítání a ukládání z/do LittleFS
+    Logger &logger;              // Reference to logger
+    Preferences preferences;     // For persistent configuration
+    bool preferencesInitialized; // Preferences initialization flag
+
+    // Configuration files
+    const char *configFile; // Configuration file
+
+    // Loading and saving from/to LittleFS
     bool loadFromFS();
     bool saveToFS();
-    
-    // Načítání a ukládání z/do Preferences
+
+    // Loading and saving from/to Preferences
     bool loadFromPreferences();
     bool saveToPreferences();
-    
+
 public:
-    // Konfigurace zařízení
-    String wifiSSID;             // SSID WiFi sítě
-    String wifiPassword;         // Heslo WiFi sítě
-    bool configMode;             // Režim konfigurace (AP mód)
-    unsigned long lastWifiAttempt; // Čas posledního pokusu o připojení k WiFi
-    LogLevel logLevel;           // Úroveň logování
-    String timezone;            // Časové pásmo ve formátu Posix
+    // Device configuration
+    String wifiSSID;               // WiFi network SSID
+    String wifiPassword;           // WiFi network password
+    bool configMode;               // Configuration mode (AP mode)
+    unsigned long lastWifiAttempt; // Time of last WiFi connection attempt
+    LogLevel logLevel;             // Logging level
+    String timezone;               // Timezone in Posix format
 
     // MQTT Configuration
-    String mqttHost;             // MQTT broker hostname
-    int mqttPort;                // MQTT broker port
-    String mqttUser;             // MQTT username
-    String mqttPassword;         // MQTT password
-    bool mqttEnabled;            // MQTT enabled flag
+    String mqttHost;     // MQTT broker hostname
+    int mqttPort;        // MQTT broker port
+    String mqttUser;     // MQTT username
+    String mqttPassword; // MQTT password
+    bool mqttEnabled;    // MQTT enabled flag
 
-    // Konstruktor
-    ConfigManager(Logger& log, const char* file = CONFIG_FILE);
-    
-    // Destruktor
+    // Constructor
+    ConfigManager(Logger &log, const char *file = CONFIG_FILE);
+
+    // Destructor
     ~ConfigManager();
-    
-    // Inicializace
+
+    // Initialization
     bool init();
-    
-    // Načtení konfigurace z obou zdrojů
+
+    // Load configuration from both sources
     bool load();
-    
-    // Uložení konfigurace do obou zdrojů
+
+    // Save configuration to both sources
     bool save();
-    
-    // Resetování konfigurace na výchozí hodnoty
+
+    // Reset configuration to default values
     void resetToDefaults();
-    
-    // Získání verze firmwaru
+
+    // Get firmware version
     String getFirmwareVersion() const;
-    
-    // Získání MAC adresy zařízení
+
+    // Get device MAC address
     String getMacAddress() const;
-    
-    // Získání názvu zařízení pro AP mód
+
+    // Get device name for AP mode
     String getDeviceName() const;
-    
-    // Nastavení WiFi konfigurace
-    bool setWiFiConfig(const String& ssid, const String& password, bool saveConfig = true);
-    
-    // Přepnutí do režimu konfigurace (AP)
+
+    // Set WiFi configuration
+    bool setWiFiConfig(const String &ssid, const String &password, bool saveConfig = true);
+
+    // Switch to configuration mode (AP)
     void enableConfigMode(bool enable = true, bool saveConfig = true);
-    
-    // Nastavení MQTT konfigurace
-    bool setMqttConfig(const String& host, int port, const String& user, 
-                      const String& password, bool enabled, bool saveConfig = true);
-                      
-    // Nastavení úrovně logování
+
+    // Set MQTT configuration
+    bool setMqttConfig(const String &host, int port, const String &user,
+                       const String &password, bool enabled, bool saveConfig = true);
+
+    // Set logging level
     void setLogLevel(LogLevel level, bool saveConfig = true);
 
-    // Nastavení časového pásma
-    bool setTimezone(const String& newTimezone, bool saveConfig = true);
+    // Set timezone
+    bool setTimezone(const String &newTimezone, bool saveConfig = true);
 };

@@ -1,3 +1,24 @@
+/**
+ * expLORA Gateway Lite
+ *
+ * LoRa protocol handler header file
+ *
+ * Copyright Pajenicko s.r.o., Igor Sverma (C) 2025
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 #pragma once
 
 #include <Arduino.h>
@@ -6,63 +27,61 @@
 #include "../Data/Logging.h"
 
 /**
- * Třída pro zpracování LoRa protokolu
- * 
- * Zajišťuje příjem a dekódování LoRa paketů, jejich dešifrování
- * a zpracování podle typu senzoru.
+ * Class for LoRa protocol processing
+ *
+ * Handles reception and decoding of LoRa packets, their decryption
+ * and processing according to sensor type.
  */
-class LoRaProtocol {
+class LoRaProtocol
+{
 private:
-    LoRaModule& loraModule;     // Reference na LoRa modul
-    SensorManager& sensorManager; // Reference na správce senzorů
-    Logger& logger;            // Reference na logger
-    
-    // Maximální délka paketu
+    LoRaModule &loraModule;       // Reference to LoRa module
+    SensorManager &sensorManager; // Reference to sensor manager
+    Logger &logger;               // Reference to logger
+
+    // Maximum packet length
     static const size_t MAX_PACKET_LENGTH = 256;
-    
-    // Buffer pro přijatý paket
+
+    // Buffer for received packet
     uint8_t packetBuffer[MAX_PACKET_LENGTH];
     uint8_t decryptedBuffer[MAX_PACKET_LENGTH];
-    
-    // Zpracování paketu podle typu senzoru
+
+    // Process packet according to sensor type
     bool processBME280Packet(uint8_t *data, uint8_t len, int sensorIndex, int rssi);
     bool processSCD40Packet(uint8_t *data, uint8_t len, int sensorIndex, int rssi);
     bool processVEML7700Packet(uint8_t *data, uint8_t len, int sensorIndex, int rssi);
     bool processMeteoPacket(uint8_t *data, uint8_t len, int sensorIndex, int rssi);
 
-    int lastProcessedSensorIndex; // Index posledně zpracovaného senzoru
+    int lastProcessedSensorIndex; // Index of last processed sensor
 
-    // Validace kontrolního součtu
+    // Validate checksum
     bool validateChecksum(uint8_t *buf, uint8_t len);
-    
-    // Výpočet kontrolního součtu
+
+    // Calculate checksum
     uint8_t calculateChecksum(const uint8_t *data, uint8_t length);
-    
-    // Kontrola platnosti paketu
+
+    // Check packet validity
     bool isValidPacket(uint8_t *buf, uint8_t len);
-    
-    // Factory metoda pro zpracování paketu podle typu senzoru
+
+    // Factory method for processing packet according to sensor type
     bool processPacketByType(SensorType type, uint8_t *data, uint8_t len, int sensorIndex, int rssi);
-    
+
 public:
-    // Konstruktor
-    LoRaProtocol(LoRaModule& module, SensorManager& manager, Logger& log);
-    
-    // Destruktor
+    // Constructor
+    LoRaProtocol(LoRaModule &module, SensorManager &manager, Logger &log);
+
+    // Destructor
     ~LoRaProtocol();
-    
-    // Zpracování přijatého paketu
+
+    // Process received packet
     bool processReceivedPacket();
-    
-    // Dešifrování dat s klíčem
+
+    // Decrypt data with key
     void decryptData(uint8_t *data, uint8_t data_len, uint32_t key);
-    
-    // Zkouška dešifrování se všemi známými klíči
+
+    // Try decryption with all known keys
     int tryDecryptWithAllKeys(uint8_t *encData, uint8_t len, uint8_t *decData);
 
-    // Getter pro lastProcessedSensorIndex
+    // Getter for lastProcessedSensorIndex
     int getLastProcessedSensorIndex() const { return lastProcessedSensorIndex; }
-
-    // Převod relativního tlaku na absolutní tlak
-    double relativeToAbsolutePressure(double p0_hpa, int altitude_m, double temp_c);
 };

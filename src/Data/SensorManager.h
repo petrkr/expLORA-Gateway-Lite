@@ -1,3 +1,24 @@
+/**
+ * expLORA Gateway Lite
+ *
+ * Sensor manager header file
+ *
+ * Copyright Pajenicko s.r.o., Igor Sverma (C) 2025
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 #pragma once
 
 #include <Arduino.h>
@@ -7,74 +28,79 @@
 #include "Logging.h"
 
 /**
- * Třída pro správu kolekce senzorů
- * 
- * Zajišťuje přidávání, úpravu a mazání senzorů, jejich vyhledávání
- * a správu jejich dat. Ukládá konfiguraci senzorů do souborového systému.
+ * Class for managing a collection of sensors
+ *
+ * Handles adding, modifying, and deleting sensors, searching for them,
+ * and managing their data. Stores sensor configuration in the file system.
  */
-class SensorManager {
+class SensorManager
+{
 private:
-    SensorData sensors[MAX_SENSORS];  // Pole senzorů - omezeno na MAX_SENSORS
-    size_t sensorCount;               // Aktuální počet senzorů
-    mutable std::mutex sensorMutex;   // Mutex pro bezpečný vícevláknový přístup
-    Logger& logger;                   // Reference na logger
-    
-    // Název souboru pro ukládání konfigurace senzorů
-    const char* sensorsFile;
-    
+    SensorData sensors[MAX_SENSORS]; // Array of sensors - limited to MAX_SENSORS
+    size_t sensorCount;              // Current number of sensors
+    mutable std::mutex sensorMutex;  // Mutex for safe multi-threaded access
+    Logger &logger;                  // Reference to logger
+
+    // Filename for storing sensor configuration
+    const char *sensorsFile;
+
 public:
-    // Konstruktor
-    SensorManager(Logger& log, const char* file = SENSORS_FILE);
-    
-    // Destruktor
+    // Constructor
+    SensorManager(Logger &log, const char *file = SENSORS_FILE);
+
+    // Destructor
     ~SensorManager();
-    
-    // Inicializace správce senzorů
+
+    // Sensor manager initialization
     bool init();
-    
-    // Přidání nového senzoru
-    int addSensor(SensorType deviceType, uint32_t serialNumber, uint32_t deviceKey, const String& name);
-    
-    // Nalezení senzoru podle sériového čísla
+
+    // Add a new sensor
+    int addSensor(SensorType deviceType, uint32_t serialNumber, uint32_t deviceKey, const String &name);
+
+    // Find sensor by serial number
     int findSensorBySN(uint32_t serialNumber);
-    
-    // Aktualizace dat senzoru
-    bool updateSensor(int index, const SensorData& data);
-    
-    // Aktualizace dat senzoru podle typu (přetížená metoda pro jednodušší použití)
-    bool updateSensorData(int index, float temperature, float humidity, float pressure, 
-        float ppm, float lux, float batteryVoltage, int rssi,
-        float windSpeed = 0.0f, uint16_t windDirection = 0, 
-        float rainAmount = 0.0f, float rainRate = 0.0f);
-    
+
+    // Update sensor data
+    bool updateSensor(int index, const SensorData &data);
+
+    // Update sensor data by type (overloaded method for easier use)
+    bool updateSensorData(int index, float temperature, float humidity, float pressure,
+                          float ppm, float lux, float batteryVoltage, int rssi,
+                          float windSpeed = 0.0f, uint16_t windDirection = 0,
+                          float rainAmount = 0.0f, float rainRate = 0.0f);
+
     // Update sensor configuration
-    bool updateSensorConfig(int index, const String& name, SensorType deviceType, 
-        uint32_t serialNumber, uint32_t deviceKey, 
-        const String& customUrl, int altitude,
-        float tempCorr, float humCorr, float pressCorr, float ppmCorr, float luxCorr,
-        float windSpeedCorr, int windDirCorr, float rainAmountCorr, float rainRateCorr);
-    
-    // Smazání senzoru
+    bool updateSensorConfig(int index, const String &name, SensorType deviceType,
+                            uint32_t serialNumber, uint32_t deviceKey,
+                            const String &customUrl, int altitude,
+                            float tempCorr, float humCorr, float pressCorr, float ppmCorr, float luxCorr,
+                            float windSpeedCorr, int windDirCorr, float rainAmountCorr, float rainRateCorr);
+
+    // Delete sensor
     bool deleteSensor(int index);
-    
-    // Získání počtu senzorů
+
+    // Get number of sensors
     size_t getSensorCount() const;
-    
-    // Získání senzoru podle indexu
-    const SensorData* getSensor(int index) const;
-    SensorData* getSensor(int index);
-    
-    // Získání seznamu všech senzorů
+
+    // Get sensor by index
+    const SensorData *getSensor(int index) const;
+    SensorData *getSensor(int index);
+
+    // Get list of all sensors
     std::vector<SensorData> getAllSensors() const;
-    
-    // Získání seznamu všech aktivních senzorů (nakonfigurovaných)
+
+    // Get list of all active sensors (configured)
     std::vector<SensorData> getActiveSensors() const;
-    
-    // Uložení konfigurace senzorů do souboru
+
+    // Save sensor configuration to file
     bool saveSensors(bool lockMutex);
-    
-    // Načtení konfigurace senzorů ze souboru
+
+    // Load sensor configuration from file
     bool loadSensors();
 
+    // Forward sensor data to HTTP
     bool forwardSensorData(int index);
+
+    // Convert relative pressure to absolute pressure
+    double relativeToAbsolutePressure(double p0_hpa, int altitude_m, double temp_c);
 };

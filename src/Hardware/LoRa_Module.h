@@ -1,3 +1,24 @@
+/**
+ * expLORA Gateway Lite
+ *
+ * LoRa module manager header file
+ *
+ * Copyright Pajenicko s.r.o., Igor Sverma (C) 2025
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 #pragma once
 
 #include <Arduino.h>
@@ -7,65 +28,66 @@
 #include "SPI_Manager.h"
 
 /**
- * Třída pro správu LoRa modulu RFM95W
- * 
- * Zajišťuje inicializaci, konfiguraci a komunikaci s LoRa modulem RFM95W.
- * Abstrahuje SPI komunikaci a obsluhu přerušení.
+ * Class for managing RFM95W LoRa module
+ *
+ * Handles initialization, configuration, and communication with RFM95W LoRa module.
+ * Abstracts SPI communication and interrupt handling.
  */
-class LoRaModule {
+class LoRaModule
+{
 private:
-    int csPin;           // Chip select pin
-    int rstPin;          // Reset pin
-    int dio0Pin;         // DIO0 pin pro přerušení
-    SPIManager* spiManager; // Správce SPI komunikace
-    
-    Logger& logger;      // Reference na logger
-    
-    static volatile bool interruptOccurred;   // Příznak přerušení (statický pro použití v ISR)
-    static void IRAM_ATTR handleInterrupt();  // Obsluha přerušení
-    
-    // Nastavení pinů a SPI
+    int csPin;              // Chip select pin
+    int rstPin;             // Reset pin
+    int dio0Pin;            // DIO0 pin for interrupt
+    SPIManager *spiManager; // SPI communication manager
+
+    Logger &logger; // Reference to logger
+
+    static volatile bool interruptOccurred;  // Interrupt flag (static for use in ISR)
+    static void IRAM_ATTR handleInterrupt(); // Interrupt handler
+
+    // Setup pins and SPI
     bool setupPins();
-    // Reset modulu
+    // Reset module
     void resetModule();
-    
+
 public:
-    // Konstruktor
-    LoRaModule(Logger& log, SPIManager* spiMgr = nullptr, int cs = LORA_CS, int rst = LORA_RST, int dio0 = LORA_DIO0);
-    
-    // Destruktor
+    // Constructor
+    LoRaModule(Logger &log, SPIManager *spiMgr = nullptr, int cs = LORA_CS, int rst = LORA_RST, int dio0 = LORA_DIO0);
+
+    // Destructor
     ~LoRaModule();
-    
-    // Inicializace LoRa modulu
+
+    // Initialize LoRa module
     bool init();
-    
-    // Reset modulu
+
+    // Reset module
     bool reset();
-    
-    // Zápis do registru
+
+    // Write to register
     void writeRegister(uint8_t reg, uint8_t value);
-    
-    // Čtení z registru
+
+    // Read from register
     uint8_t readRegister(uint8_t reg);
-    
-    // Přijímání paketu
+
+    // Receive packet
     bool receivePacket(uint8_t *buffer, uint8_t *length);
-    
-    // Získání RSSI
+
+    // Get RSSI
     int getRSSI();
-    
-    // Vrátí SNR posledního paketu
+
+    // Return SNR of last packet
     float getSNR();
-    
-    // Kontrola, zda došlo k přerušení
+
+    // Check if interrupt occurred
     static bool hasInterrupt();
-    
-    // Vynulování příznaku přerušení
+
+    // Clear interrupt flag
     static void clearInterrupt();
-    
-    // Kontrola, zda je modul připojený
+
+    // Check if module is connected
     bool isConnected();
-    
-    // Získání verze čipu
+
+    // Get chip version
     uint8_t getVersion();
 };

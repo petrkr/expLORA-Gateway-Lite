@@ -1,3 +1,24 @@
+/**
+ * expLORA Gateway Lite
+ *
+ * Main program file for the expLORA Gateway
+ *
+ * Copyright Pajenicko s.r.o., Igor Sverma (C) 2025
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 #include <Arduino.h>
 #include <SPI.h>
 #include <WiFi.h>
@@ -6,7 +27,7 @@
 #include <esp_task_wdt.h>
 #include <ArduinoJson.h>
 
-// Konfigurační hlavičky
+// Configuration headers
 #include "config.h"
 
 // Data
@@ -23,32 +44,34 @@
 // Storage
 #include "Storage/ConfigManager.h"
 
-// Protokol
+// Protocol
 #include "Protocol/LoRaProtocol.h"
 // MQTT
 #include "Protocol/MQTTManager.h"
 
-// Web rozhraní
+// Web interface
 #include "Web/WebServer.h"
 #include "Web/HTMLGenerator.h"
 
-// Globální instance objektů
-Logger logger;                // Systém logování
-ConfigManager* configManager; // Správce konfigurace
-SPIManager* spiManager;       // Správce SPI komunikace
-LoRaModule* loraModule;       // LoRa modul
-SensorManager* sensorManager; // Správce senzorů
-LoRaProtocol* loraProtocol;   // LoRa protokol
-MQTTManager* mqttManager;     // MQTT Manager
-WebPortal* webPortal;         // Webové rozhraní
+// Global object instances
+Logger logger;                // Logging system
+ConfigManager *configManager; // Configuration manager
+SPIManager *spiManager;       // SPI communication manager
+LoRaModule *loraModule;       // LoRa module
+SensorManager *sensorManager; // Sensor manager
+LoRaProtocol *loraProtocol;   // LoRa protocol
+MQTTManager *mqttManager;     // MQTT Manager
+WebPortal *webPortal;         // Web interface
 
-// Časovač pro vypnutí AP režimu
+// Timer for disabling AP mode
 unsigned long apStartTime = 0;
 bool temporaryAPMode = false;
 
-// Inicializace souborového systému
-bool initFileSystem() {
-    if (!LittleFS.begin(true)) {
+// File system initialization
+bool initFileSystem()
+{
+    if (!LittleFS.begin(true))
+    {
         Serial.println("ERROR: Failed to mount LittleFS");
         return false;
     }
@@ -56,196 +79,226 @@ bool initFileSystem() {
     return true;
 }
 
-// Setup - inicializace zařízení
-void setup() {
-    // Inicializace sériového portu
+// Setup - device initialization
+void setup()
+{
+    // Serial port initialization
     Serial.begin(115200);
-    delay(1000);  // Počkáme na stabilizaci
-    
+    delay(1000); // Wait for stabilization
+
     Serial.println("\n\nexpLORA Gateway Lite");
     Serial.println("------------------------------------------------------------");
-    
-    // Explicitní inicializace PSRAM
-    #ifdef BOARD_HAS_PSRAM
-    if (psramInit()) {
+
+// Explicit PSRAM initialization
+#ifdef BOARD_HAS_PSRAM
+    if (psramInit())
+    {
         Serial.println("PSRAM initialized manually!");
     }
-    #endif
-    
-    // Diagnostika dostupné paměti
+#endif
+
+    // Memory diagnostics
     Serial.printf("Total heap: %d bytes\n", ESP.getHeapSize());
     Serial.printf("Free heap: %d bytes\n", ESP.getFreeHeap());
-    
-    // Inicializace PSRAM
-    #ifdef BOARD_HAS_PSRAM
+
+// PSRAM initialization
+#ifdef BOARD_HAS_PSRAM
     bool psramInitialized = false;
-    
-    // Zkusíme různé metody detekce PSRAM
-    if (esp_spiram_is_initialized()) {
+
+    // Try different PSRAM detection methods
+    if (esp_spiram_is_initialized())
+    {
         psramInitialized = true;
         Serial.println("PSRAM initialized via esp_spiram_is_initialized()");
-    } 
-    else if (ESP.getPsramSize() > 0) {
+    }
+    else if (ESP.getPsramSize() > 0)
+    {
         psramInitialized = true;
         Serial.println("PSRAM detected via ESP.getPsramSize()");
     }
-    
-    if (psramInitialized) {
+
+    if (psramInitialized)
+    {
         Serial.printf("Total PSRAM: %d bytes\n", ESP.getPsramSize());
         Serial.printf("Free PSRAM: %d bytes\n", ESP.getFreePsram());
-    } else {
+    }
+    else
+    {
         Serial.println("PSRAM initialization failed or not available");
     }
-    #endif
-    
-    // Inicializace souborového systému
-    if (!initFileSystem()) {
+#endif
+
+    // File system initialization
+    if (!initFileSystem())
+    {
         Serial.println("ERROR: File system initialization failed");
         return;
     }
-    
-    // Inicializace systému logování
-    if (!logger.init(LOG_BUFFER_SIZE)) {
+
+    // Logging system initialization
+    if (!logger.init(LOG_BUFFER_SIZE))
+    {
         Serial.println("ERROR: Logger initialization failed");
         return;
     }
-    
-    // Základní log po inicializaci
+
+    // Basic log after initialization
     logger.info("expLORA Gateway Lite starting up - Firmware v" + String(FIRMWARE_VERSION));
 
-    // Inicializace HTML generátoru
-    if (!HTMLGenerator::init(true, WEB_BUFFER_SIZE)) {
+    // HTML generator initialization
+    if (!HTMLGenerator::init(true, WEB_BUFFER_SIZE))
+    {
         logger.error("Failed to initialize HTML generator");
         return;
     }
-    
-    // Inicializace správce konfigurace
+
+    // Configuration manager initialization
     configManager = new ConfigManager(logger);
-    if (!configManager->init()) {
+    if (!configManager->init())
+    {
         logger.error("Failed to initialize configuration manager");
         return;
     }
-    
-    // Nastavení úrovně logování podle konfigurace
+
+    // Setting logging level according to configuration
     logger.setLogLevel(configManager->logLevel);
-    
-    // Inicializace SPI správce
+
+    // SPI manager initialization
     spiManager = new SPIManager(logger);
-    if (!spiManager->init()) {
+    if (!spiManager->init())
+    {
         logger.error("Failed to initialize SPI manager");
         return;
     }
-    
-    // Inicializace správce senzorů
+
+    // Sensor manager initialization
     sensorManager = new SensorManager(logger);
-    if (!sensorManager->init()) {
+    if (!sensorManager->init())
+    {
         logger.error("Failed to initialize sensor manager");
-    } else {
-        logger.info("Sensor manager initialized with " + 
+    }
+    else
+    {
+        logger.info("Sensor manager initialized with " +
                     String(sensorManager->getSensorCount()) + " sensors");
     }
-    
-    // Initialization WiFi - UPRAVENÁ ČÁST KÓDU
-    logger.info("Configuring WiFi. ConfigMode: " + String(configManager->configMode ? "true" : "false") + 
+
+    // WiFi Initialization - MODIFIED CODE SECTION
+    logger.info("Configuring WiFi. ConfigMode: " + String(configManager->configMode ? "true" : "false") +
                 ", SSID length: " + String(configManager->wifiSSID.length()));
 
-    // Nastavení časovače pro dočasný AP režim
+    // Setting timer for temporary AP mode
     apStartTime = millis();
     temporaryAPMode = true;
-    
-    if (configManager->configMode || configManager->wifiSSID.length() == 0) {
-        // Jsme v konfiguračním režimu nebo nemáme credentials - pouze AP režim
+
+    if (configManager->configMode || configManager->wifiSSID.length() == 0)
+    {
+        // We're in configuration mode or don't have credentials - AP mode only
         logger.info("Starting in AP mode only");
         WiFi.mode(WIFI_AP);
-        
-        // Získáme MAC adresu zařízení a vytvoříme unikátní SSID
+
+        // Get device MAC address and create unique SSID
         String macAddress = WiFi.macAddress();
-        macAddress.replace(":", ""); // Odstranění dvojteček
-        String uniqueSSID = "expLORA-GW-" + macAddress.substring(6); // Použijeme posledních 6 znaků MAC adresy
-        
-        // Konfigurace AP s unikátním SSID
+        macAddress.replace(":", "");                                 // Remove colons
+        String uniqueSSID = "expLORA-GW-" + macAddress.substring(6); // Use last 6 characters of MAC address
+
+        // Configure AP with unique SSID
         WiFi.softAP(uniqueSSID.c_str());
         logger.info("AP started with SSID: " + uniqueSSID + ", IP: " + WiFi.softAPIP().toString());
-        
+
         configManager->enableConfigMode(true);
         webPortal = new WebPortal(*sensorManager, logger,
-            configManager->wifiSSID, configManager->wifiPassword,
-            configManager->configMode, *configManager, configManager->timezone);
-    } else {
-        // Máme credentials - spustíme AP+STA režim
+                                  configManager->wifiSSID, configManager->wifiPassword,
+                                  configManager->configMode, *configManager, configManager->timezone);
+    }
+    else
+    {
+        // We have credentials - start AP+STA mode
         logger.info("Starting in AP+STA mode (dual mode)");
         WiFi.mode(WIFI_AP_STA);
-        
-        // Získáme MAC adresu zařízení a vytvoříme unikátní SSID
+
+        // Get device MAC address and create unique SSID
         String macAddress = WiFi.macAddress();
-        macAddress.replace(":", ""); // Odstranění dvojteček
-        String uniqueSSID = "expLORA-GW-" + macAddress.substring(6); // Použijeme posledních 6 znaků MAC adresy
-        
-        // Konfigurace AP části s unikátním SSID
+        macAddress.replace(":", "");                                 // Remove colons
+        String uniqueSSID = "expLORA-GW-" + macAddress.substring(6); // Use last 6 characters of MAC address
+
+        // Configure AP part with unique SSID
         WiFi.softAP(uniqueSSID.c_str());
-        logger.info("Temporary AP started with SSID: " + uniqueSSID + 
-                   " (will be active for 5 minutes). IP: " + WiFi.softAPIP().toString());
-        
-        // Konfigurace STA části (klient)
+        logger.info("Temporary AP started with SSID: " + uniqueSSID +
+                    " (will be active for 5 minutes). IP: " + WiFi.softAPIP().toString());
+
+        // Configure STA part (client)
         logger.info("Attempting to connect to WiFi: " + configManager->wifiSSID);
         WiFi.begin(configManager->wifiSSID.c_str(), configManager->wifiPassword.c_str());
-        
+
         int attempts = 0;
-        while (WiFi.status() != WL_CONNECTED && attempts < 20) {
+        while (WiFi.status() != WL_CONNECTED && attempts < 20)
+        {
             delay(500);
             Serial.print(".");
             attempts++;
         }
-        
-        if (WiFi.status() == WL_CONNECTED) {
+
+        if (WiFi.status() == WL_CONNECTED)
+        {
             logger.info("WiFi connected! IP: " + WiFi.localIP().toString());
             configManager->enableConfigMode(false);
-            
+
             // Initialize NTP
-            configTime(0, 0, NTP_SERVER); // First set to UTC
+            configTime(0, 0, NTP_SERVER);                     // First set to UTC
             setenv("TZ", configManager->timezone.c_str(), 1); // Set the TZ environment variable
-            tzset(); // Apply the time zone
+            tzset();                                          // Apply the time zone
             logger.info("NTP time set");
             logger.setTimeInitialized(true);
-        } else {
-            logger.warning("Failed to connect to WiFi after " + String(attempts) + " attempts. SSID: " + 
-                        configManager->wifiSSID + ", Continuing in AP mode only");
-            // Přepneme se pouze na AP režim
+        }
+        else
+        {
+            logger.warning("Failed to connect to WiFi after " + String(attempts) + " attempts. SSID: " +
+                           configManager->wifiSSID + ", Continuing in AP mode only");
+            // Switch to AP mode only
             WiFi.mode(WIFI_AP);
         }
-        
-        // Inicializace webového rozhraní - bude dostupné přes AP i klienta (pokud je připojen)
-        webPortal = new WebPortal(*sensorManager, logger, 
-            configManager->wifiSSID, configManager->wifiPassword,
-            configManager->configMode, *configManager, configManager->timezone);
+
+        // Web interface initialization - will be accessible via AP and client (if connected)
+        webPortal = new WebPortal(*sensorManager, logger,
+                                  configManager->wifiSSID, configManager->wifiPassword,
+                                  configManager->configMode, *configManager, configManager->timezone);
     }
-    
-    // Inicializace LoRa modulu
+
+    // LoRa module initialization
     loraModule = new LoRaModule(logger, spiManager);
-    if (!loraModule->init()) {
+    if (!loraModule->init())
+    {
         logger.error("Failed to initialize LoRa module");
-    } else {
+    }
+    else
+    {
         logger.info("LoRa module initialized successfully");
     }
-    
-    // Inicializace LoRa protokolu
+
+    // LoRa protocol initialization
     loraProtocol = new LoRaProtocol(*loraModule, *sensorManager, logger);
-    
-    // Inicializace webového portálu, pokud ještě není inicializován
-    if (!webPortal) { 
+
+    // Web portal initialization if not already initialized
+    if (!webPortal)
+    {
         webPortal = new WebPortal(*sensorManager, logger, configManager->wifiSSID, configManager->wifiPassword, configManager->configMode, *configManager,
-        configManager->timezone);
+                                  configManager->timezone);
     }
 
     // Initialize MQTT Manager if WiFi is connected
     mqttManager = new MQTTManager(*sensorManager, *configManager, logger);
-    if (!mqttManager->init()) {
+    if (!mqttManager->init())
+    {
         logger.debug("MQTT Manager initialization skipped (disabled in config)");
     }
 
-    if (!webPortal->init()) {  
+    if (!webPortal->init())
+    {
         logger.error("Failed to initialize web portal");
-    } else {
+    }
+    else
+    {
         logger.info("Web portal initialized successfully");
     }
 
@@ -253,111 +306,130 @@ void setup() {
 
     // Initialize task watchdog
     esp_task_wdt_init(WDT_TIMEOUT, true); // Enable panic on timeout
-    esp_task_wdt_add(NULL); // Add current task to watchdog
+    esp_task_wdt_add(NULL);               // Add current task to watchdog
     logger.info("Task watchdog initialized with timeout of " + String(WDT_TIMEOUT) + " seconds");
-    
+
     logger.info("System initialization complete");
 }
 
-// Loop - hlavní smyčka
-void loop() {
+// Loop - main loop
+void loop()
+{
     esp_task_wdt_reset();
 
-    // Kontrola časovače pro dočasný AP režim
-    if (temporaryAPMode && !configManager->configMode && configManager->wifiSSID.length() > 0) {
-        if (millis() - apStartTime > AP_TIMEOUT) {
-            // Čas vypršel, přepneme do klientského režimu, pokud jsme úspěšně připojeni
-            if (WiFi.status() == WL_CONNECTED) {
+    // Check timer for temporary AP mode
+    if (temporaryAPMode && !configManager->configMode && configManager->wifiSSID.length() > 0)
+    {
+        if (millis() - apStartTime > AP_TIMEOUT)
+        {
+            // Time expired, switch to client mode if successfully connected
+            if (WiFi.status() == WL_CONNECTED)
+            {
                 logger.info("Temporary AP timeout reached. Switching to client mode only.");
                 WiFi.mode(WIFI_STA);
                 temporaryAPMode = false;
-            } else {
-                // Nejsme připojeni jako klient, necháme AP běžet
+            }
+            else
+            {
+                // Not connected as a client, keep AP running
                 logger.info("Temporary AP timeout reached but WiFi client not connected. Keeping AP mode active.");
-                temporaryAPMode = false; // Zastavíme časovač, ale AP zůstane aktivní
+                temporaryAPMode = false; // Stop timer, but AP remains active
             }
         }
     }
 
-    // Zpracování LoRa paketů
-    //if (loraModule && loraProtocol) {
+    // Process LoRa packets
+    // if (loraModule && loraProtocol) {
     //    if (LoRaModule::hasInterrupt()) {
     //        logger.debug("LoRa interrupt detected");
     //        loraProtocol->processReceivedPacket();
     //    }
     //}
-    
-    // Pokud jsme v AP módu, zpracujeme DNS captive portal:
-    if (webPortal && webPortal->isInAPMode()) {
-        webPortal->processDNS();  // Tato metoda uvnitř volá dnsServer.processNextRequest();
+
+    // If in AP mode, process DNS captive portal:
+    if (webPortal && webPortal->isInAPMode())
+    {
+        webPortal->processDNS(); // This method internally calls dnsServer.processNextRequest();
     }
 
-    // Obsluha webového rozhraní
-    if (webPortal) {
+    // Handle web interface
+    if (webPortal)
+    {
         webPortal->handleClient();
     }
-    
+
     // Process MQTT communication
-    if (mqttManager && WiFi.status() == WL_CONNECTED) {
+    if (mqttManager && WiFi.status() == WL_CONNECTED)
+    {
         mqttManager->process();
     }
-    
+
     // Add a check for LoRa packet processing to publish to MQTT
     static unsigned int lastProcessedIndex = -1;
-    if (loraModule && loraProtocol && LoRaModule::hasInterrupt()) {
-        if (loraProtocol->processReceivedPacket()) {
+    if (loraModule && loraProtocol && LoRaModule::hasInterrupt())
+    {
+        if (loraProtocol->processReceivedPacket())
+        {
             // If we have a mqttManager and it's connected, publish the latest sensor data
-            if (mqttManager && WiFi.status() == WL_CONNECTED) {
+            if (mqttManager && WiFi.status() == WL_CONNECTED)
+            {
                 mqttManager->publishSensorData(loraProtocol->getLastProcessedSensorIndex());
             }
         }
-    }   
+    }
 
-    // Kontrola WiFi připojení a případný reconnect
-    if (!configManager->configMode && WiFi.status() != WL_CONNECTED) {
+    // Check WiFi connection and reconnect if needed
+    if (!configManager->configMode && WiFi.status() != WL_CONNECTED)
+    {
         unsigned long now = millis();
-        if (now - configManager->lastWifiAttempt > WIFI_RECONNECT_INTERVAL) {
+        if (now - configManager->lastWifiAttempt > WIFI_RECONNECT_INTERVAL)
+        {
             logger.info("Attempting to reconnect to WiFi...");
             configManager->lastWifiAttempt = now;
             WiFi.begin(configManager->wifiSSID.c_str(), configManager->wifiPassword.c_str());
-            
+
             int attempts = 0;
-            while (WiFi.status() != WL_CONNECTED && attempts < 10) {
+            while (WiFi.status() != WL_CONNECTED && attempts < 10)
+            {
                 delay(500);
                 Serial.print(".");
                 attempts++;
             }
-            
-            if (WiFi.status() == WL_CONNECTED) {
+
+            if (WiFi.status() == WL_CONNECTED)
+            {
                 logger.info("WiFi reconnected! IP: " + WiFi.localIP().toString());
-                
-                // Aktualizace NTP času
-                configTime(0, 0, NTP_SERVER); // First set to UTC
+
+                // Update NTP time
+                configTime(0, 0, NTP_SERVER);                     // First set to UTC
                 setenv("TZ", configManager->timezone.c_str(), 1); // Set the TZ environment variable
-                tzset(); // Apply the time zone
-            } else {
+                tzset();                                          // Apply the time zone
+            }
+            else
+            {
                 logger.warning("Failed to reconnect to WiFi");
             }
         }
     }
-    
-    // Krátké zpoždění pro stabilitu
+
+    // Short delay for stability
     delay(5);
-    
-    // Diagnostika paměti každých 10 minut
+
+    // Memory diagnostics every 10 minutes
     static unsigned long lastMemCheck = 0;
-    if (millis() - lastMemCheck > 600000) {  // 10 minut
+    if (millis() - lastMemCheck > 600000)
+    { // 10 minutes
         lastMemCheck = millis();
-        
-        logger.info("Memory status - Free heap: " + String(ESP.getFreeHeap()) + 
+
+        logger.info("Memory status - Free heap: " + String(ESP.getFreeHeap()) +
                     " bytes, Largest block: " + String(ESP.getMaxAllocHeap()) + " bytes");
-                    
-        #ifdef BOARD_HAS_PSRAM
-        if (esp_spiram_is_initialized()) {
-            logger.debug("PSRAM status - Free: " + String(ESP.getFreePsram()) + 
-                       " bytes, Largest block: " + String(ESP.getMaxAllocPsram()) + " bytes");
+
+#ifdef BOARD_HAS_PSRAM
+        if (esp_spiram_is_initialized())
+        {
+            logger.debug("PSRAM status - Free: " + String(ESP.getFreePsram()) +
+                         " bytes, Largest block: " + String(ESP.getMaxAllocPsram()) + " bytes");
         }
-        #endif
+#endif
     }
 }
-

@@ -1,109 +1,151 @@
+/**
+ * expLORA Gateway Lite
+ *
+ * Configuration manager implementation file
+ *
+ * Copyright Pajenicko s.r.o., Igor Sverma (C) 2025
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 #include "ConfigManager.h"
 #include <Arduino.h>
 #include <WiFi.h>
 #include <LittleFS.h>
 #include <ArduinoJson.h>
 
-// Konstruktor
-ConfigManager::ConfigManager(Logger& log, const char* file)
-    : logger(log), preferencesInitialized(false), configFile(file) {
-    
-    // Výchozí hodnoty
+// Constructor
+ConfigManager::ConfigManager(Logger &log, const char *file)
+    : logger(log), preferencesInitialized(false), configFile(file)
+{
+
+    // Default values
     resetToDefaults();
 }
 
-// Destruktor
-ConfigManager::~ConfigManager() {
-    // Ukončení Preferences, pokud byly inicializovány
-    if (preferencesInitialized) {
+// Destructor
+ConfigManager::~ConfigManager()
+{
+    // End Preferences if initialized
+    if (preferencesInitialized)
+    {
         preferences.end();
     }
 }
 
-// Inicializace
-bool ConfigManager::init() {
-    // Inicializace Preferences
+// Initialization
+bool ConfigManager::init()
+{
+    // Initialize Preferences
     preferencesInitialized = preferences.begin("sverio", false);
-    
-    if (!preferencesInitialized) {
+
+    if (!preferencesInitialized)
+    {
         logger.error("Failed to initialize Preferences");
-    } else {
+    }
+    else
+    {
         logger.debug("Preferences initialized successfully");
     }
-    
-    // Načtení konfigurace
+
+    // Load configuration
     return load();
 }
 
-// Načtení konfigurace z obou zdrojů
-bool ConfigManager::load() {
+// Load configuration from both sources
+bool ConfigManager::load()
+{
     bool fsSuccess = loadFromFS();
     bool prefSuccess = loadFromPreferences();
-    
-    if (fsSuccess) {
+
+    if (fsSuccess)
+    {
         logger.info("Configuration loaded from file system");
     }
-    
-    if (prefSuccess) {
+
+    if (prefSuccess)
+    {
         logger.info("Persistent configuration loaded from Preferences");
     }
-    
+
     return fsSuccess || prefSuccess;
 }
 
-// Uložení konfigurace do obou zdrojů
-bool ConfigManager::save() {
+// Save configuration to both sources
+bool ConfigManager::save()
+{
     bool fsSuccess = saveToFS();
     bool prefSuccess = saveToPreferences();
-    
-    if (fsSuccess) {
+
+    if (fsSuccess)
+    {
         logger.info("Configuration saved to file system");
-    } else {
+    }
+    else
+    {
         logger.error("Failed to save configuration to file system");
     }
-    
-    if (prefSuccess) {
+
+    if (prefSuccess)
+    {
         logger.info("Persistent configuration saved to Preferences");
-    } else {
+    }
+    else
+    {
         logger.error("Failed to save configuration to Preferences");
     }
-    
+
     return fsSuccess && prefSuccess;
 }
 
-// Načítání z LittleFS
-bool ConfigManager::loadFromFS() {
+// Loading from LittleFS
+bool ConfigManager::loadFromFS()
+{
     // Check if file exists
-    if (!LittleFS.exists(configFile)) {
+    if (!LittleFS.exists(configFile))
+    {
         logger.warning("Config file not found: " + String(configFile));
         return false;
     }
-    
+
     // Open file
     File file = LittleFS.open(configFile, "r");
-    if (!file) {
+    if (!file)
+    {
         logger.error("Failed to open config file for reading: " + String(configFile));
         return false;
     }
-    
+
     // Log the raw content for debugging
     String fileContent = file.readString();
     logger.debug("Raw config file content: " + fileContent);
     file.close();
-    
+
     // Re-open the file for parsing
     file = LittleFS.open(configFile, "r");
-    
+
     // Create JSON document
     DynamicJsonDocument doc(512);
     DeserializationError error = deserializeJson(doc, file);
     file.close();
-    
-    if (error) {
+
+    if (error)
+    {
         logger.error("Failed to parse config file: " + String(error.c_str()));
         return false;
     }
-    
+
     // Load values and log them
     wifiSSID = doc["ssid"].as<String>();
     wifiPassword = doc["password"].as<String>();
@@ -116,30 +158,33 @@ bool ConfigManager::loadFromFS() {
     mqttUser = doc["mqttUser"] | MQTT_DEFAULT_USER;
     mqttPassword = doc["mqttPassword"] | MQTT_DEFAULT_PASS;
     mqttEnabled = doc["mqttEnabled"] | MQTT_DEFAULT_ENABLED;
-    
-    logger.debug("Loaded config - SSID: " + wifiSSID + 
-                ", Password length: " + String(wifiPassword.length()) + 
-                ", configMode: " + String(configMode ? "true" : "false"));
-    
+
+    logger.debug("Loaded config - SSID: " + wifiSSID +
+                 ", Password length: " + String(wifiPassword.length()) +
+                 ", configMode: " + String(configMode ? "true" : "false"));
+
     // Set log level if available
-    if (doc.containsKey("logLevel")) {
+    if (doc.containsKey("logLevel"))
+    {
         String logLevelStr = doc["logLevel"].as<String>();
         logLevel = logger.levelFromString(logLevelStr);
     }
-    
+
     return true;
 }
 
-// Ukládání do LittleFS
-bool ConfigManager::saveToFS() {
-    // Otevření souboru pro zápis
+// Saving to LittleFS
+bool ConfigManager::saveToFS()
+{
+    // Open file for writing
     File file = LittleFS.open(configFile, "w");
-    if (!file) {
+    if (!file)
+    {
         logger.error("Failed to open config file for writing: " + String(configFile));
         return false;
     }
-    
-    // Vytvoření JSON dokumentu
+
+    // Create JSON document
     DynamicJsonDocument doc(512);
     doc["ssid"] = wifiSSID;
     doc["password"] = wifiPassword;
@@ -151,70 +196,82 @@ bool ConfigManager::saveToFS() {
     doc["mqttUser"] = mqttUser;
     doc["mqttPassword"] = mqttPassword;
     doc["mqttEnabled"] = mqttEnabled;
-    
-    // Serializace do souboru
-    if (serializeJson(doc, file) == 0) {
+
+    // Serialize to file
+    if (serializeJson(doc, file) == 0)
+    {
         logger.error("Failed to write config to file");
         file.close();
         return false;
     }
-    
+
     file.close();
     return true;
 }
 
-// Načítání z Preferences
-bool ConfigManager::loadFromPreferences() {
-    if (!preferencesInitialized) {
+// Loading from Preferences
+bool ConfigManager::loadFromPreferences()
+{
+    if (!preferencesInitialized)
+    {
         return false;
     }
-    
-    // Načtení základní konfigurace
-    // Poznámka: Necháme Preferences načíst jen logLevel, 
-    // který skutečně potřebujeme zachovat při aktualizaci firmwaru
-    
-    if (preferences.isKey("logLevel")) {
+
+    // Load basic configuration
+    // Note: We let Preferences load only logLevel,
+    // which we really need to preserve during firmware updates
+
+    if (preferences.isKey("logLevel"))
+    {
         String logLevelStr = preferences.getString("logLevel", "INFO");
         logLevel = logger.levelFromString(logLevelStr);
     }
-    
-    if (preferences.isKey("timezone")) {
+
+    if (preferences.isKey("timezone"))
+    {
         timezone = preferences.getString("timezone", DEFAULT_TIMEZONE);
     }
-    
+
     // MQTT configuration from preferences
-    if (preferences.isKey("mqttHost")) {
+    if (preferences.isKey("mqttHost"))
+    {
         mqttHost = preferences.getString("mqttHost", MQTT_DEFAULT_HOST);
     }
-    if (preferences.isKey("mqttPort")) {
+    if (preferences.isKey("mqttPort"))
+    {
         mqttPort = preferences.getInt("mqttPort", MQTT_DEFAULT_PORT);
     }
-    if (preferences.isKey("mqttUser")) {
+    if (preferences.isKey("mqttUser"))
+    {
         mqttUser = preferences.getString("mqttUser", MQTT_DEFAULT_USER);
     }
-    if (preferences.isKey("mqttPassword")) {
+    if (preferences.isKey("mqttPassword"))
+    {
         mqttPassword = preferences.getString("mqttPassword", MQTT_DEFAULT_PASS);
     }
     mqttEnabled = preferences.getBool("mqttEnabled", MQTT_DEFAULT_ENABLED);
 
-    // Ostatní hodnoty by měly být načteny z LittleFS, ale pokud je potřeba,
-    // můžeme je načíst z Preferences jako záložní řešení
-    if (wifiSSID.length() == 0 && preferences.isKey("ssid")) {
+    // Other values should be loaded from LittleFS, but if needed,
+    // we can load them from Preferences as a backup solution
+    if (wifiSSID.length() == 0 && preferences.isKey("ssid"))
+    {
         wifiSSID = preferences.getString("ssid", "");
         wifiPassword = preferences.getString("password", "");
         configMode = preferences.getBool("configMode", true);
     }
-    
+
     return true;
 }
 
-// Ukládání do Preferences
-bool ConfigManager::saveToPreferences() {
-    if (!preferencesInitialized) {
+// Saving to Preferences
+bool ConfigManager::saveToPreferences()
+{
+    if (!preferencesInitialized)
+    {
         return false;
     }
-    
-    // Uložení úrovně logování
+
+    // Save logging level
     String logLevelStr = logger.levelToString(logLevel);
     preferences.putString("logLevel", logLevelStr);
     preferences.putString("timezone", timezone);
@@ -225,46 +282,50 @@ bool ConfigManager::saveToPreferences() {
     preferences.putString("mqttUser", mqttUser);
     preferences.putString("mqttPassword", mqttPassword);
     preferences.putBool("mqttEnabled", mqttEnabled);
-    
-    // Uložení WiFi konfigurace (jako zálohu)
+
+    // Save WiFi configuration (as backup)
     preferences.putString("ssid", wifiSSID);
     preferences.putString("password", wifiPassword);
     preferences.putBool("configMode", configMode);
-    
+
     return true;
 }
 
 // Add a new method to set MQTT configuration
-bool ConfigManager::setMqttConfig(const String& host, int port, const String& user, 
-                                 const String& password, bool enabled, bool saveConfig) {
+bool ConfigManager::setMqttConfig(const String &host, int port, const String &user,
+                                  const String &password, bool enabled, bool saveConfig)
+{
     mqttHost = host;
     mqttPort = port;
     mqttUser = user;
     mqttPassword = password;
     mqttEnabled = enabled;
-    
+
     return saveConfig ? save() : true;
 }
 
 // Add a new method to set the timezone
-bool ConfigManager::setTimezone(const String& newTimezone, bool saveConfig) {
+bool ConfigManager::setTimezone(const String &newTimezone, bool saveConfig)
+{
     timezone = newTimezone;
-    
+
     // Configure the time with new timezone
-    configTime(0, 0, NTP_SERVER); // First set to UTC
+    configTime(0, 0, NTP_SERVER);      // First set to UTC
     setenv("TZ", timezone.c_str(), 1); // Set the TZ environment variable
-    tzset(); // Apply the time zone
-    
-    if (saveConfig) {
+    tzset();                           // Apply the time zone
+
+    if (saveConfig)
+    {
         return save();
     }
-    
+
     return true;
 }
 
-// Resetování konfigurace na výchozí hodnoty
-void ConfigManager::resetToDefaults() {
-   wifiSSID = "";
+// Reset configuration to default values
+void ConfigManager::resetToDefaults()
+{
+    wifiSSID = "";
     wifiPassword = "";
     configMode = true;
     lastWifiAttempt = 0;
@@ -277,69 +338,80 @@ void ConfigManager::resetToDefaults() {
     mqttEnabled = MQTT_DEFAULT_ENABLED;
 }
 
-// Získání verze firmwaru
-String ConfigManager::getFirmwareVersion() const {
+// Get firmware version
+String ConfigManager::getFirmwareVersion() const
+{
     return FIRMWARE_VERSION;
 }
 
-// Získání MAC adresy zařízení
-String ConfigManager::getMacAddress() const {
+// Get device MAC address
+String ConfigManager::getMacAddress() const
+{
     uint8_t mac[6];
     WiFi.macAddress(mac);
-    
+
     char macStr[18];
-    snprintf(macStr, sizeof(macStr), "%02X:%02X:%02X:%02X:%02X:%02X", 
+    snprintf(macStr, sizeof(macStr), "%02X:%02X:%02X:%02X:%02X:%02X",
              mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-    
+
     return String(macStr);
 }
 
-// Získání názvu zařízení pro AP mód
-String ConfigManager::getDeviceName() const {
+// Get device name for AP mode
+String ConfigManager::getDeviceName() const
+{
     uint8_t mac[6];
     WiFi.macAddress(mac);
-    
+
     String deviceName = "expLORA-GW-";
-    for (int i = 0; i < 6; i++) {
-        if (mac[i] < 16) deviceName += "0";
+    for (int i = 0; i < 6; i++)
+    {
+        if (mac[i] < 16)
+            deviceName += "0";
         deviceName += String(mac[i], HEX);
     }
-    
+
     String result = deviceName;
     result.toUpperCase();
     return result;
 }
 
-// Nastavení WiFi konfigurace
-bool ConfigManager::setWiFiConfig(const String& ssid, const String& password, bool saveConfig) {
+// Set WiFi configuration
+bool ConfigManager::setWiFiConfig(const String &ssid, const String &password, bool saveConfig)
+{
     wifiSSID = ssid;
     wifiPassword = password;
     configMode = false;
-    
-    if (saveConfig) {
+
+    if (saveConfig)
+    {
         return save();
     }
-    
+
     return true;
 }
 
-// Přepnutí do režimu konfigurace (AP)
-void ConfigManager::enableConfigMode(bool enable, bool saveConfig) {
+// Switch to configuration mode (AP)
+void ConfigManager::enableConfigMode(bool enable, bool saveConfig)
+{
     configMode = enable;
-    
-    if (saveConfig) {
+
+    if (saveConfig)
+    {
         save();
     }
 }
 
-// Nastavení úrovně logování
-void ConfigManager::setLogLevel(LogLevel level, bool saveConfig) {
+// Set logging level
+void ConfigManager::setLogLevel(LogLevel level, bool saveConfig)
+{
     logLevel = level;
-    
-    // Aktualizace úrovně v loggeru
+
+    // Update level in logger
     logger.setLogLevel(level);
-    
-    if (saveConfig) {
+
+    if (saveConfig)
+    {
         save();
     }
 }

@@ -1,92 +1,125 @@
+/**
+ * expLORA Gateway Lite
+ *
+ * LoRa module manager implementation file
+ *
+ * Copyright Pajenicko s.r.o., Igor Sverma (C) 2025
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 #include "LoRa_Module.h"
 #include <Arduino.h>
 
-// Inicializace statických proměnných
+// Initialization of static variables
 volatile bool LoRaModule::interruptOccurred = false;
 
-// Obsluha přerušení
-void IRAM_ATTR LoRaModule::handleInterrupt() {
+// Interrupt handler
+void IRAM_ATTR LoRaModule::handleInterrupt()
+{
     interruptOccurred = true;
 }
 
-// Konstruktor
-LoRaModule::LoRaModule(Logger& log, SPIManager* spiMgr, int cs, int rst, int dio0)
-    : csPin(cs), rstPin(rst), dio0Pin(dio0), spiManager(spiMgr), logger(log) {
-    
-    // Pokud nebyla předána instance SPIManager, vytvoříme novou
-    if (spiManager == nullptr) {
+// Constructor
+LoRaModule::LoRaModule(Logger &log, SPIManager *spiMgr, int cs, int rst, int dio0)
+    : csPin(cs), rstPin(rst), dio0Pin(dio0), spiManager(spiMgr), logger(log)
+{
+
+    // If no SPIManager instance was provided, create a new one
+    if (spiManager == nullptr)
+    {
         spiManager = new SPIManager(logger);
     }
 }
 
-// Destruktor
-LoRaModule::~LoRaModule() {
-    // Neuvolňujeme instanci SPIManager, pokud byla vytvořena externě
+// Destructor
+LoRaModule::~LoRaModule()
+{
+    // We don't free the SPIManager instance if it was created externally
 }
 
-// Nastavení pinů a SPI
-bool LoRaModule::setupPins() {
-    // Nastavení CS pinu
+// Setup pins and SPI
+bool LoRaModule::setupPins()
+{
+    // Set CS pin
     pinMode(csPin, OUTPUT);
     digitalWrite(csPin, HIGH);
-    
-    // Nastavení RST pinu
+
+    // Set RST pin
     pinMode(rstPin, OUTPUT);
     digitalWrite(rstPin, HIGH);
-    
-    // Nastavení DIO0 pinu
+
+    // Set DIO0 pin
     pinMode(dio0Pin, INPUT);
-    
-    // Inicializace SPI
-    if (!spiManager->isInitialized()) {
-        if (!spiManager->init()) {
+
+    // Initialize SPI
+    if (!spiManager->isInitialized())
+    {
+        if (!spiManager->init())
+        {
             logger.error("Failed to initialize SPI manager");
             return false;
         }
     }
-    
-    // Připojení přerušení na DIO0 pin
+
+    // Attach interrupt to DIO0 pin
     attachInterrupt(digitalPinToInterrupt(dio0Pin), handleInterrupt, RISING);
-    
-    logger.debug("LoRa module pins configured: CS=" + String(csPin) + 
-                ", RST=" + String(rstPin) + ", DIO0=" + String(dio0Pin));
-    
+
+    logger.debug("LoRa module pins configured: CS=" + String(csPin) +
+                 ", RST=" + String(rstPin) + ", DIO0=" + String(dio0Pin));
+
     return true;
 }
 
-// Reset modulu
-void LoRaModule::resetModule() {
+// Reset module
+void LoRaModule::resetModule()
+{
     logger.debug("Resetting LoRa module...");
-    
+
     digitalWrite(rstPin, LOW);
     delay(10);
     digitalWrite(rstPin, HIGH);
     delay(10);
 }
 
-// Inicializace LoRa modulu
-bool LoRaModule::init() {
+// Initialize LoRa module
+bool LoRaModule::init()
+{
     logger.info("Initializing LoRa module...");
-    
-    // Nastavení pinů a SPI
-    if (!setupPins()) {
+
+    // Setup pins and SPI
+    if (!setupPins())
+    {
         logger.error("Failed to setup pins for LoRa module");
         return false;
     }
-    
-    // Reset modulu
+
+    // Reset module
     resetModule();
-    
-    // Kontrola komunikace s modulem s opakováním
+
+    // Check communication with module with retry
     uint8_t version = 0;
     uint8_t retries = 3;
     bool success = false;
 
-    while (retries > 0 && !success) {
+    while (retries > 0 && !success)
+    {
         version = getVersion();
         logger.debug("LoRa chip version: 0x" + String(version, HEX));
 
-        if (version == 0x12) {
+        if (version == 0x12)
+        {
             success = true;
             break;
         }
@@ -94,216 +127,236 @@ bool LoRaModule::init() {
         delay(100);
         retries--;
 
-        // Necháme běžet další úkoly mezi pokusy
+        // Let other tasks run between attempts
         yield();
 
-        // Zkusíme resetovat SPI a modul znovu
-        if (retries == 1) {
+        // Try to reset SPI and module again
+        if (retries == 1)
+        {
             logger.warning("Trying to restore SPI connection...");
             spiManager->reset();
             resetModule();
         }
     }
 
-    if (!success) {
+    if (!success)
+    {
         logger.error("LoRa module not found after multiple attempts!");
-        // Zkontrolujeme stavy pinů pro diagnostiku
+        // Check pin states for diagnostics
         logger.debug("MISO pin state: " + String(digitalRead(SPI_MISO_PIN)));
         return false;
     }
-    
+
     logger.info("Configuring LoRa module...");
-    
-    // Přepnutí do spánkového režimu pro konfiguraci
+
+    // Switch to sleep mode for configuration
     writeRegister(REG_OP_MODE, MODE_SLEEP);
     delay(10);
-    
-    // Nastavení LoRa módu
+
+    // Set LoRa mode
     writeRegister(REG_OP_MODE, MODE_SLEEP | MODE_LONG_RANGE_MODE);
     delay(10);
-    
-    // Nastavení frekvence na 868 MHz pro EU
+
+    // Set frequency to 868 MHz for EU
     uint64_t frf = ((uint64_t)868000000 << 19) / 32000000;
     writeRegister(REG_FRF_MSB, (uint8_t)(frf >> 16));
     writeRegister(REG_FRF_MID, (uint8_t)(frf >> 8));
     writeRegister(REG_FRF_LSB, (uint8_t)(frf >> 0));
-    
-    // Nastavení výkonu
-    writeRegister(REG_PA_CONFIG, 0x8F);  // PA_BOOST, max power
-    
-    // Nastavení přijímače
-    writeRegister(REG_LNA, 0x23);  // Vysoký zisk, automatický AGC
-    
-    // Optimalizace pro SF7–SF10 
-    writeRegister(REG_DETECTION_OPTIMIZE,  0xC5);
+
+    // Set power
+    writeRegister(REG_PA_CONFIG, 0x8F); // PA_BOOST, max power
+
+    // Set receiver
+    writeRegister(REG_LNA, 0x23); // High gain, automatic AGC
+
+    // Optimization for SF7-SF10
+    writeRegister(REG_DETECTION_OPTIMIZE, 0xC5);
     writeRegister(REG_DETECTION_THRESHOLD, 0x0C);
-    
+
     // Over-current protection
-    writeRegister(REG_OCP, 0x2F);  // 150mA
-    
-    // Nastavení základních FIFO adres
+    writeRegister(REG_OCP, 0x2F); // 150mA
+
+    // Set base FIFO addresses
     writeRegister(REG_FIFO_TX_BASE_ADDR, 0);
     writeRegister(REG_FIFO_RX_BASE_ADDR, 0);
-    
-    // Nastavení šířky pásma, korekce chyb, spreading faktoru
-    writeRegister(REG_MODEM_CONFIG_1, 0x72);  // BW=125kHz, CR=4/5, explicit header
-    writeRegister(REG_MODEM_CONFIG_2, 0x94);  // SF=9, CRC enabled (0x90 | 0x04)
-    writeRegister(REG_MODEM_CONFIG_3, 0x04);  // LNA AGC on  
-    
-    // Nastavení preamble
+
+    // Set bandwidth, error correction, spreading factor
+    writeRegister(REG_MODEM_CONFIG_1, 0x72); // BW=125kHz, CR=4/5, explicit header
+    writeRegister(REG_MODEM_CONFIG_2, 0x94); // SF=9, CRC enabled (0x90 | 0x04)
+    writeRegister(REG_MODEM_CONFIG_3, 0x04); // LNA AGC on
+
+    // Set preamble
     writeRegister(REG_PREAMBLE_MSB, 0x00);
     writeRegister(REG_PREAMBLE_LSB, 0x10);
-    
-    // Nastavení sync word
+
+    // Set sync word
     writeRegister(REG_SYNC_WORD, 0x12);
-    
-    // Přepnutí do režimu kontinuálního příjmu
+
+    // Switch to continuous receive mode
     writeRegister(REG_OP_MODE, MODE_RX_CONTINUOUS | MODE_LONG_RANGE_MODE);
     delay(10);
-    
+
     logger.info("LoRa module initialized and in receive mode");
     return true;
 }
 
-// Reset modulu
-bool LoRaModule::reset() {
+// Reset module
+bool LoRaModule::reset()
+{
     resetModule();
-    
-    // Kontrola komunikace s modulem po resetu
+
+    // Check communication with module after reset
     uint8_t version = getVersion();
-    if (version != 0x12) {
+    if (version != 0x12)
+    {
         logger.error("LoRa module not responding after reset");
         return false;
     }
-    
-    // Přepnutí do spánkového režimu pro konfiguraci
+
+    // Switch to sleep mode for configuration
     writeRegister(REG_OP_MODE, MODE_SLEEP);
     delay(10);
-    
-    // Přepnutí do režimu kontinuálního příjmu
+
+    // Switch to continuous receive mode
     writeRegister(REG_OP_MODE, MODE_RX_CONTINUOUS | MODE_LONG_RANGE_MODE);
     delay(10);
-    
+
     logger.info("LoRa module reset successfully");
     return true;
 }
 
-// Zápis do registru
-void LoRaModule::writeRegister(uint8_t reg, uint8_t value) {
+// Write to register
+void LoRaModule::writeRegister(uint8_t reg, uint8_t value)
+{
     digitalWrite(csPin, LOW);
-    
+
     spiManager->beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE0));
-    spiManager->transfer(reg | 0x80);  // 0x80 indikuje zápis
+    spiManager->transfer(reg | 0x80); // 0x80 indicates write
     spiManager->transfer(value);
     spiManager->endTransaction();
-    
+
     digitalWrite(csPin, HIGH);
 }
 
-// Čtení z registru
-uint8_t LoRaModule::readRegister(uint8_t reg) {
+// Read from register
+uint8_t LoRaModule::readRegister(uint8_t reg)
+{
     digitalWrite(csPin, LOW);
-    
+
     spiManager->beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE0));
-    spiManager->transfer(reg & 0x7F);  // 0x7F indikuje čtení
+    spiManager->transfer(reg & 0x7F); // 0x7F indicates read
     uint8_t value = spiManager->transfer(0x00);
     spiManager->endTransaction();
-    
+
     digitalWrite(csPin, HIGH);
     return value;
 }
 
-// Přijímání paketu
-bool LoRaModule::receivePacket(uint8_t *buffer, uint8_t *length) {
-    // Kontrola, zda byl dokončen příjem
+// Receive packet
+bool LoRaModule::receivePacket(uint8_t *buffer, uint8_t *length)
+{
+    // Check if reception is complete
     uint8_t irqFlags = readRegister(REG_IRQ_FLAGS);
-    
-    // Kontrola příznaku dokončení příjmu
-    if (!(irqFlags & 0x40)) {
+
+    // Check reception complete flag
+    if (!(irqFlags & 0x40))
+    {
         return false;
     }
-    
-    // Čtení počtu přijatých bytů
+
+    // Read number of received bytes
     uint8_t packetLength = readRegister(REG_RX_NB_BYTES);
-    
-    // Základní kontrola délky dat
-    if (packetLength == 0 || packetLength > 255) {
+
+    // Basic check of data length
+    if (packetLength == 0 || packetLength > 255)
+    {
         logger.warning("Invalid packet length: " + String(packetLength));
-        // Vyčištění příznaků přerušení
+        // Clear interrupt flags
         writeRegister(REG_IRQ_FLAGS, 0xFF);
         return false;
     }
-    
+
     *length = packetLength;
-    
-    // Získání aktuální adresy v FIFO
+
+    // Get current address in FIFO
     uint8_t currentAddr = readRegister(REG_FIFO_RX_CURRENT_ADDR);
-    
-    // Kontrola, že adresa dává smysl
-    if (currentAddr > 255) {
+
+    // Check that address makes sense
+    if (currentAddr > 255)
+    {
         logger.warning("Invalid FIFO address: " + String(currentAddr));
-        // Vyčištění příznaků přerušení
+        // Clear interrupt flags
         writeRegister(REG_IRQ_FLAGS, 0xFF);
         return false;
     }
-    
-    // Nastavení FIFO adresy
+
+    // Set FIFO address
     writeRegister(REG_FIFO_ADDR_PTR, currentAddr);
-    
-    // Čtení dat z FIFO
+
+    // Read data from FIFO
     digitalWrite(csPin, LOW);
-    
+
     spiManager->beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE0));
-    spiManager->transfer(REG_FIFO & 0x7F);  // 0x7F indikuje čtení
-    
-    // Přenos dat
-    for (int i = 0; i < packetLength; i++) {
+    spiManager->transfer(REG_FIFO & 0x7F); // 0x7F indicates read
+
+    // Transfer data
+    for (int i = 0; i < packetLength; i++)
+    {
         buffer[i] = spiManager->transfer(0x00);
     }
-    
+
     spiManager->endTransaction();
     digitalWrite(csPin, HIGH);
-    
-    // Vyčištění příznaků přerušení
+
+    // Clear interrupt flags
     writeRegister(REG_IRQ_FLAGS, 0xFF);
-    
+
     return true;
 }
 
-// Získání RSSI
-int LoRaModule::getRSSI() {
+// Get RSSI
+int LoRaModule::getRSSI()
+{
     int16_t rssi = readRegister(REG_PKT_RSSI_VALUE) - 137;
     return rssi;
 }
 
-// Získání SNR posledního paketu
-float LoRaModule::getSNR() {
+// Get SNR of last packet
+float LoRaModule::getSNR()
+{
     int8_t snr = readRegister(REG_PKT_SNR_VALUE);
-    if (snr & 0x80) {
+    if (snr & 0x80)
+    {
         snr = ((~snr + 1) & 0xFF) >> 2;
         snr = -snr;
-    } else {
+    }
+    else
+    {
         snr = snr >> 2;
     }
     return snr * 0.25;
 }
 
-// Kontrola, zda došlo k přerušení
-bool LoRaModule::hasInterrupt() {
+// Check if interrupt occurred
+bool LoRaModule::hasInterrupt()
+{
     return interruptOccurred;
 }
 
-// Vynulování příznaku přerušení
-void LoRaModule::clearInterrupt() {
+// Clear interrupt flag
+void LoRaModule::clearInterrupt()
+{
     interruptOccurred = false;
 }
 
-// Kontrola, zda je modul připojený
-bool LoRaModule::isConnected() {
+// Check if module is connected
+bool LoRaModule::isConnected()
+{
     return (getVersion() == 0x12);
 }
 
-// Získání verze čipu
-uint8_t LoRaModule::getVersion() {
+// Get chip version
+uint8_t LoRaModule::getVersion()
+{
     return readRegister(REG_VERSION);
 }

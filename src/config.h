@@ -1,18 +1,39 @@
+/**
+ * expLORA Gateway Lite
+ *
+ * Main configuration file for the expLORA Gateway
+ *
+ * Copyright Pajenicko s.r.o., Igor Sverma (C) 2025
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 #pragma once
 
-// Verze firmwaru
-#define FIRMWARE_VERSION "1.0.3"
+// Firmware version
+#define FIRMWARE_VERSION "1.0.5"
 
-// Konfigurace hardwaru
-// Definice pinů pro RFM95W
-#define LORA_CS 5        // NSS pin
-#define LORA_RST 14      // RESET pin
-#define LORA_DIO0 36     // DIO0 pin (přerušení)
-#define SPI_MISO_PIN 35  // MISO pin
-#define SPI_MOSI_PIN 37  // MOSI pin
-#define SPI_SCK_PIN 18   // SCK pin
+// Hardware configuration
+// RFM95W pin definitions
+#define LORA_CS 5       // NSS pin
+#define LORA_RST 14     // RESET pin
+#define LORA_DIO0 36    // DIO0 pin (interrupt)
+#define SPI_MISO_PIN 35 // MISO pin
+#define SPI_MOSI_PIN 37 // MOSI pin
+#define SPI_SCK_PIN 18  // SCK pin
 
-// LoRa registry
+// LoRa registers
 #define REG_FIFO 0x00
 #define REG_OP_MODE 0x01
 #define REG_FRF_MSB 0x06
@@ -49,7 +70,7 @@
 #define REG_VERSION 0x42
 #define REG_PA_DAC 0x4D
 
-// LoRa módy
+// LoRa modes
 #define MODE_LONG_RANGE_MODE 0x80
 #define MODE_SLEEP 0x00
 #define MODE_STDBY 0x01
@@ -58,20 +79,20 @@
 #define MODE_RX_SINGLE 0x06
 #define MODE_CAD 0x07
 
-// Konfigurace aplikace
-#define MAX_SENSORS 20                // Maximální počet senzorů
-#define LOG_BUFFER_SIZE 200           // Velikost bufferu pro logy
-#define AP_TIMEOUT 300000             // 5 minut v milisekundách pro timeout AP módu
-#define WIFI_RECONNECT_INTERVAL 60000 // 1 minuta v milisekundách pro pokus o reconnect
-#define WDT_TIMEOUT 10                // Watchdog timeout v sekundách
+// Application configuration
+#define MAX_SENSORS 20                // Maximum number of sensors
+#define LOG_BUFFER_SIZE 200           // Size of log buffer
+#define AP_TIMEOUT 300000             // AP mode timeout (5 minutes in milliseconds)
+#define WIFI_RECONNECT_INTERVAL 60000 // WiFi reconnect attempt interval (1 minute in milliseconds)
+#define WDT_TIMEOUT 10                // Watchdog timeout in seconds
 
-// Konfigurace souborového systému
-#define CONFIG_FILE "/config.json"    // Soubor s konfigurací
-#define SENSORS_FILE "/sensors.json"  // Soubor se senzory
+// File system configuration
+#define CONFIG_FILE "/config.json"   // Configuration file
+#define SENSORS_FILE "/sensors.json" // Sensors file
 
-// NTP konfigurace
+// NTP configuration
 #define NTP_SERVER "pool.ntp.org"
-#define DEFAULT_TIMEZONE "CET-1CEST,M3.5.0,M10.5.0/3"  // Central European Time with auto DST
+#define DEFAULT_TIMEZONE "CET-1CEST,M3.5.0,M10.5.0/3" // Central European Time with auto DST
 
 // MQTT Configuration
 #define MQTT_DEFAULT_HOST "homeassistant.local"
@@ -82,26 +103,25 @@
 #define MQTT_RECONNECT_INTERVAL 30000 // 30 seconds in milliseconds
 #define HA_DISCOVERY_PREFIX "homeassistant"
 
-// CORS hlavičky pro API
+// CORS headers for API
 #define CORS_HEADER_NAME "Access-Control-Allow-Origin"
 #define CORS_HEADER_VALUE "*"
 
-// Webserver porty
-#define HTTP_PORT 80           // Port pro HTTP server
-#define DNS_PORT 53            // Port pro DNS server
+// Webserver ports
+#define HTTP_PORT 80 // HTTP server port
+#define DNS_PORT 53  // DNS server port
 
-// Definice typů senzorů - snadno rozšiřitelné pro další typy
+// Sensor type definitions - easily extendable for additional types
 #define SENSOR_TYPE_UNKNOWN 0x00
-#define SENSOR_TYPE_BME280 0x01    // Teplota, vlhkost, tlak
-#define SENSOR_TYPE_SCD40 0x02     // Teplota, vlhkost, CO2
-#define SENSOR_TYPE_METEO 0x03  // Meteorologická stanice
-#define SENSOR_TYPE_VEML7700 0x04  // Světelný senzor (LUX)
-// Přidejte další typy senzorů zde...
+#define SENSOR_TYPE_BME280 0x01   // Temperature, humidity, pressure
+#define SENSOR_TYPE_SCD40 0x02    // Temperature, humidity, CO2
+#define SENSOR_TYPE_METEO 0x03    // Meteorological station
+#define SENSOR_TYPE_VEML7700 0x04 // Light sensor (LUX)
+// Add additional sensor types here...
 
-// Konfigurace PSRAM pro web server
-#define WEB_BUFFER_SIZE 16384   // Reduced to 16KB
+// PSRAM configuration for web server
+#define WEB_BUFFER_SIZE 16384 // Reduced to 16KB
 
-
-// Nastavení OTA updatu
-#define OTA_PASSWORD "admin"    // Heslo pro OTA update
-#define OTA_PORT 3232           // Port pro OTA update
+// OTA update settings
+#define OTA_PASSWORD "admin" // OTA update password
+#define OTA_PORT 3232        // OTA update port

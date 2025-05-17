@@ -1,11 +1,32 @@
+/**
+ * expLORA Gateway Lite
+ *
+ * Logging system implementation file
+ *
+ * Copyright Pajenicko s.r.o., Igor Sverma (C) 2025
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 #include "Logging.h"
 #include <time.h>
 #include <esp_heap_caps.h>
 #include <Arduino.h>
 
-// Inicializace statických proměnných
+// Initialization of static variables
 LogLevel Logger::currentLevel = LogLevel::INFO;
-LogEntry* Logger::logBuffer = nullptr;
+LogEntry *Logger::logBuffer = nullptr;
 size_t Logger::logBufferSize = LOG_BUFFER_SIZE;
 size_t Logger::logIndex = 0;
 size_t Logger::logCount = 0;
@@ -14,95 +35,108 @@ bool Logger::initialized = false;
 
 bool Logger::timeInitialized = false;
 
-void Logger::setTimeInitialized(bool initialized) {
+void Logger::setTimeInitialized(bool initialized)
+{
     timeInitialized = initialized;
 }
 
-// Inicializace loggeru
-bool Logger::init(size_t bufferSize) {
-    // Pokud je již inicializován, nejprve uvolníme paměť
-    if (initialized) {
+// Logger initialization
+bool Logger::init(size_t bufferSize)
+{
+    // If already initialized, first free the memory
+    if (initialized)
+    {
         deinit();
     }
-    
+
     logBufferSize = bufferSize;
-    
 
     logBuffer = new LogEntry[logBufferSize];
     Serial.printf("Logger: Allocated %u bytes in RAM for logs\n", sizeof(LogEntry) * logBufferSize);
-    
-    // Kontrola, zda se povedla alokace paměti
-    if (logBuffer == nullptr) {
+
+    // Check if memory allocation was successful
+    if (logBuffer == nullptr)
+    {
         Serial.println("Logger: Failed to allocate memory for logs");
         return false;
     }
-    
-    // Reset indexů a počtu logů
+
+    // Reset indexes and log count
     logIndex = 0;
     logCount = 0;
     initialized = true;
-    
-    // První log po inicializaci - použijte char[] místo String concat
+
+    // First log after initialization - use char[] instead of String concat
     char initMsg[64];
-    snprintf(initMsg, sizeof(initMsg), "Logging system initialized with %u entries", 
+    snprintf(initMsg, sizeof(initMsg), "Logging system initialized with %u entries",
              logBufferSize);
     info(initMsg);
-    
+
     return true;
 }
 
-// Uvolnění paměti loggeru
-void Logger::deinit() {
-    if (!initialized) return;
-    
+// Free logger memory
+void Logger::deinit()
+{
+    if (!initialized)
+        return;
+
     std::lock_guard<std::mutex> lock(logMutex);
-    
-    if (logBuffer != nullptr) {
+
+    if (logBuffer != nullptr)
+    {
         delete[] logBuffer;
         logBuffer = nullptr;
     }
-    
+
     initialized = false;
 }
 
-// Nastavení úrovně logování
-void Logger::setLogLevel(LogLevel level) {
+// Set logging level
+void Logger::setLogLevel(LogLevel level)
+{
     currentLevel = level;
     info("Log level set to: " + levelToString(level));
 }
 
-// Získání aktuální úrovně logování
-LogLevel Logger::getLogLevel() {
+// Get current logging level
+LogLevel Logger::getLogLevel()
+{
     return currentLevel;
 }
 
-// Získání časové značky
-String Logger::getTimeStamp() {
+// Get timestamp
+String Logger::getTimeStamp()
+{
     static char timeBuffer[32];
-    
-    if (timeInitialized) {
+
+    if (timeInitialized)
+    {
         struct tm timeinfo;
-        if (getLocalTime(&timeinfo)) {
+        if (getLocalTime(&timeinfo))
+        {
             strftime(timeBuffer, sizeof(timeBuffer), "%Y-%m-%d %H:%M:%S", &timeinfo);
             return String(timeBuffer);
         }
     }
-    
+
     // Time not set - use simple static string
     return String("[Time not set]");
 }
 
-// Přidání logu s určenou úrovní
-void Logger::log(LogLevel level, const String& message) {
-    if (!initialized || level > currentLevel) {
+// Add log with specified level
+void Logger::log(LogLevel level, const String &message)
+{
+    if (!initialized || level > currentLevel)
+    {
         return;
     }
-    
-    // Získáme časovou značku jen jednou
-    String timeStamp = getTimeStamp();
-    //String timeStamp = "[Time not set]";
 
-    // Výpis na sériový port
+    // Get timestamp only once
+    String timeStamp = getTimeStamp();
+    // String timeStamp = "[Time not set]";
+
+    // Print to serial port
     Serial.print(timeStamp);
     Serial.print(F(" ["));
     Serial.print(levelToString(level));
@@ -110,82 +144,106 @@ void Logger::log(LogLevel level, const String& message) {
     Serial.println(message);
 
     std::lock_guard<std::mutex> lock(logMutex);
-    
-    if (logBuffer != nullptr) {
+
+    if (logBuffer != nullptr)
+    {
         logBuffer[logIndex].timestamp = millis();
         logBuffer[logIndex].level = level;
         logBuffer[logIndex].message = message;
         logBuffer[logIndex].formattedTime = timeStamp;
-      
+
         logIndex = (logIndex + 1) % logBufferSize;
-        if (logCount < logBufferSize) {
+        if (logCount < logBufferSize)
+        {
             logCount++;
         }
     }
 }
 
-// Pomocné metody pro různé úrovně logů
-void Logger::error(const String& message) {
+// Helper methods for different log levels
+void Logger::error(const String &message)
+{
     log(LogLevel::ERROR, message);
 }
 
-void Logger::warning(const String& message) {
+void Logger::warning(const String &message)
+{
     log(LogLevel::WARNING, message);
 }
 
-void Logger::info(const String& message) {
+void Logger::info(const String &message)
+{
     log(LogLevel::INFO, message);
 }
 
-void Logger::debug(const String& message) {
+void Logger::debug(const String &message)
+{
     log(LogLevel::DEBUG, message);
 }
 
-void Logger::verbose(const String& message) {
+void Logger::verbose(const String &message)
+{
     log(LogLevel::VERBOSE, message);
 }
 
-// Získání všech logů (pro webové rozhraní)
-const LogEntry* Logger::getLogs(size_t &count) {
+// Get all logs (for web interface)
+const LogEntry *Logger::getLogs(size_t &count)
+{
     std::lock_guard<std::mutex> lock(logMutex);
     count = logCount;
     return logBuffer;
 }
 
-// Vymazání všech logů
-void Logger::clearLogs() {
+// Clear all logs
+void Logger::clearLogs()
+{
     std::lock_guard<std::mutex> lock(logMutex);
-    
+
     // Explicitly clear all String objects
-    for (size_t i = 0; i < logBufferSize; i++) {
+    for (size_t i = 0; i < logBufferSize; i++)
+    {
         // Force String deallocation by assigning empty strings
         logBuffer[i].message = String();
         logBuffer[i].formattedTime = String();
     }
-    
+
     logIndex = 0;
     logCount = 0;
 }
 
-// Převod úrovně logu z řetězce
-LogLevel Logger::levelFromString(const String& levelStr) {
-    if (levelStr.equalsIgnoreCase("ERROR")) return LogLevel::ERROR;
-    if (levelStr.equalsIgnoreCase("WARNING")) return LogLevel::WARNING;
-    if (levelStr.equalsIgnoreCase("INFO")) return LogLevel::INFO;
-    if (levelStr.equalsIgnoreCase("DEBUG")) return LogLevel::DEBUG;
-    if (levelStr.equalsIgnoreCase("VERBOSE")) return LogLevel::VERBOSE;
-    
+// Convert log level from string
+LogLevel Logger::levelFromString(const String &levelStr)
+{
+    if (levelStr.equalsIgnoreCase("ERROR"))
+        return LogLevel::ERROR;
+    if (levelStr.equalsIgnoreCase("WARNING"))
+        return LogLevel::WARNING;
+    if (levelStr.equalsIgnoreCase("INFO"))
+        return LogLevel::INFO;
+    if (levelStr.equalsIgnoreCase("DEBUG"))
+        return LogLevel::DEBUG;
+    if (levelStr.equalsIgnoreCase("VERBOSE"))
+        return LogLevel::VERBOSE;
+
     return LogLevel::INFO;
 }
 
-// Převod úrovně logu na řetězec
-String Logger::levelToString(LogLevel level) {
-    switch (level) {
-        case LogLevel::ERROR: return "ERROR";
-        case LogLevel::WARNING: return "WARNING";
-        case LogLevel::INFO: return "INFO";
-        case LogLevel::DEBUG: return "DEBUG";
-        case LogLevel::VERBOSE: return "VERBOSE";
-        default: return "UNKNOWN";
+// Convert log level to string
+String Logger::levelToString(LogLevel level)
+{
+    switch (level)
+    {
+    case LogLevel::ERROR:
+        return "ERROR";
+    case LogLevel::WARNING:
+        return "WARNING";
+    case LogLevel::INFO:
+        return "INFO";
+    case LogLevel::DEBUG:
+        return "DEBUG";
+    case LogLevel::VERBOSE:
+        return "VERBOSE";
+    default:
+        return "UNKNOWN";
     }
 }

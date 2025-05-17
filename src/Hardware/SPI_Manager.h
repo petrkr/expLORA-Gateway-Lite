@@ -1,3 +1,24 @@
+/**
+ * expLORA Gateway Lite
+ *
+ * SPI communication manager header file
+ *
+ * Copyright Pajenicko s.r.o., Igor Sverma (C) 2025
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 #pragma once
 
 #include <Arduino.h>
@@ -6,46 +27,47 @@
 #include "../config.h"
 
 /**
- * Třída pro správu SPI komunikace
- * 
- * Zajišťuje inicializaci a správu SPI rozhraní pro komunikaci s LoRa modulem a dalšími periferiemi.
+ * Class for SPI communication management
+ *
+ * Ensures initialization and management of SPI interface for communication with LoRa module and other peripherals.
  */
-class SPIManager {
+class SPIManager
+{
 private:
-    SPIClass* spi;      // Instance SPI
-    Logger& logger;     // Reference na logger
-    
-    int sckPin;         // SCK pin
-    int misoPin;        // MISO pin
-    int mosiPin;        // MOSI pin
-    bool initialized;   // Příznak inicializace
-    
+    SPIClass *spi;  // SPI instance
+    Logger &logger; // Reference to logger
+
+    int sckPin;       // SCK pin
+    int misoPin;      // MISO pin
+    int mosiPin;      // MOSI pin
+    bool initialized; // Initialization flag
+
 public:
-    // Konstruktor
-    SPIManager(Logger& log, int sck = SPI_SCK_PIN, int miso = SPI_MISO_PIN, int mosi = SPI_MOSI_PIN);
-    
-    // Destruktor
+    // Constructor
+    SPIManager(Logger &log, int sck = SPI_SCK_PIN, int miso = SPI_MISO_PIN, int mosi = SPI_MOSI_PIN);
+
+    // Destructor
     ~SPIManager();
-    
-    // Inicializace SPI
+
+    // SPI initialization
     bool init();
-    
-    // Reset SPI
+
+    // SPI reset
     bool reset();
-    
-    // Získání instance SPI
-    SPIClass* getSPI();
-    
-    // Začátek transakce
+
+    // Get SPI instance
+    SPIClass *getSPI();
+
+    // Begin transaction
     void beginTransaction(SPISettings settings = SPISettings(1000000, MSBFIRST, SPI_MODE0));
-    
-    // Konec transakce
+
+    // End transaction
     void endTransaction();
-    
-    // Přenos dat
+
+    // Data transfer
     uint8_t transfer(uint8_t data);
-    void transfer(uint8_t* data, size_t length);
-    
-    // Kontrola, zda je SPI inicializováno
+    void transfer(uint8_t *data, size_t length);
+
+    // Check if SPI is initialized
     bool isInitialized() const;
 };
