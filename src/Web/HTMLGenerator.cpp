@@ -213,100 +213,12 @@ void HTMLGenerator::addNavigation(String &html, const String &activePage)
     html += "<a href='/mqtt' class='" + String(activePage == "MQTT" ? "active" : "") + "'>MQTT</a>";
     html += "<a href='/logs' class='" + String(activePage == "Logs" ? "active" : "") + "'>Logs</a>";
     html += "<a href='/api' class='" + String(activePage == "API" ? "active" : "") + "'>API</a>";
-    html += "<a href='/reboot' class='" + String(activePage == "Reboot" ? "active" : "") + "'>Reboot</a>";
+    html += "<a href='/reboot' onclick=\"return confirm('Are you sure you want to reboot the device?');\">Reboot</a>";
     html += "<a href='javascript:void(0);' class='icon' onclick='toggleMenu()'>&#9776;</a>";
     html += "</nav>";
 
     html += "<div class='container'>";
 }
-
-// Generování domovské stránky
-// String HTMLGenerator::generateHomePage(const std::vector<SensorData>& sensors) {
-//     String html;
-
-//     // Přidání hlavičky
-//     addHtmlHeader(html, "Home");
-
-//     // Stavová karta
-//     html += "<div class='card'>";
-//     html += "<h2>System Status</h2>";
-//     html += "<p><strong>Mode:</strong> " + String(WiFi.status() == WL_CONNECTED ? "Client" : "Access Point") + "</p>";
-
-//     if (WiFi.status() == WL_CONNECTED) {
-//         html += "<p><strong>WiFi:</strong> Connected to " + WiFi.SSID() + "</p>";
-//         html += "<p><strong>IP:</strong> " + WiFi.localIP().toString() + "</p>";
-//     } else {
-//         html += "<p><strong>WiFi:</strong> Disconnected</p>";
-//         if (WiFi.getMode() == WIFI_AP) {
-//             html += "<p><strong>AP IP:</strong> " + WiFi.softAPIP().toString() + "</p>";
-//         }
-//     }
-
-//     // Aktuální čas
-//     struct tm timeinfo;
-//     if (getLocalTime(&timeinfo)) {
-//         char timeStr[64];
-//         strftime(timeStr, sizeof(timeStr), "%Y-%m-%d %H:%M:%S", &timeinfo);
-//         html += "<p><strong>Time:</strong> " + String(timeStr) + "</p>";
-//     } else {
-//         html += "<p><strong>Time:</strong> Not set</p>";
-//     }
-
-//     html += "<p><strong>Uptime:</strong> " + String(millis() / 1000) + " seconds</p>";
-
-//     // Informace o paměti
-//     html += "<p><strong>Free Heap:</strong> " + String(ESP.getFreeHeap()) + " bytes</p>";
-//     #ifdef BOARD_HAS_PSRAM
-//     if (esp_spiram_is_initialized()) {
-//         html += "<p><strong>Free PSRAM:</strong> " + String(ESP.getFreePsram()) + " bytes</p>";
-//     }
-//     #endif
-
-//     html += "</div>";
-
-//     // Aktivní senzory
-//     html += "<div class='card'>";
-//     html += "<h2>Active Sensors</h2>";
-
-//     if (sensors.empty()) {
-//         html += "<p>No sensors configured. Please add sensors from the Sensors page.</p>";
-//     } else {
-//         // Použití optimalizované metody pro generování tabulky senzorů
-//         if (htmlBuffer != nullptr) {
-//             memset(htmlBuffer, 0, htmlBufferSize);
-//             size_t maxLen = htmlBufferSize;
-//             generateSensorTable(htmlBuffer, maxLen, sensors);
-//             html += htmlBuffer;
-//         } else {
-//             // Fallback pokud není k dispozici buffer
-//             html += "<table>";
-//             html += "<tr><th>Name</th><th>Type</th><th>Last Seen</th><th>Data</th></tr>";
-
-//             for (const auto& sensor : sensors) {
-//                 if (sensor.configured) {
-//                     html += "<tr>";
-//                     html += "<td>" + sensor.name + "</td>";
-//                     html += "<td>" + sensorTypeToString(sensor.deviceType) + "</td>";
-//                     html += "<td>" + sensor.getLastSeenString() + "</td>";
-//                     html += "<td>" + sensor.getDataString() + "</td>";
-//                     html += "</tr>";
-//                 }
-//             }
-
-//             html += "</table>";
-//         }
-//     }
-
-//     html += "</div>";
-
-//     // Auto-refresh
-//     html += "<script>startAutoRefresh(30000);</script>";
-
-//     // Přidání patičky
-//     addHtmlFooter(html);
-
-//     return html;
-// }
 
 // In HTMLGenerator.cpp, modify the generateHomePage method
 String HTMLGenerator::generateHomePage(const std::vector<SensorData> &sensors)
@@ -349,7 +261,18 @@ String HTMLGenerator::generateHomePage(const std::vector<SensorData> &sensors)
         html += "<p><strong>Time:</strong> Not set</p>";
     }
 
-    html += "<p><strong>Uptime:</strong> " + String(millis() / 1000) + " seconds</p>";
+    unsigned long seconds = millis() / 1000;
+    unsigned int days    = seconds / 86400;           // 24*60*60
+    unsigned int hours   = (seconds % 86400) / 3600;  // rest of the day
+    unsigned int minutes = (seconds % 3600) / 60;     // rest of the hour
+    unsigned int secs    = seconds % 60;
+    
+    html  += "<p><strong>Uptime:</strong> ";
+    if (days)               html += String(days)    + " d ";
+    if (days || hours)      html += String(hours)   + " h ";
+    if (days || hours || minutes)
+                           html += String(minutes) + " m ";
+    html += String(secs)    + " s</p>";
 
     html += "</div>";
 
@@ -729,10 +652,18 @@ String HTMLGenerator::generateSensorAddPage()
     html += "</div>"; // end of urlHelp
     html += "<input type='text' id='customUrl' name='customUrl' placeholder='https://example.com/api?temp=*TEMP*&hum=*HUM*'>";
 
+    // Altitude field pro BME280 (zobrazí se jen když je vybraný BME280)
+    html += "<div id='altitudeDiv' style='display: none;'>";
+    html += "<label for='altitude'>Altitude (m) - Optional for pressure adjustment:</label>";
+    html += "<input type='number' id='altitude' name='altitude' placeholder='e.g. 320' min='0' max='8848'>";
+    html += "<p style='font-size: 0.9em; color: #666;'>If provided, relative pressure will be converted to absolute pressure</p>";
+    html += "</div>";
+
     // JavaScript pro aktualizaci placeholderů podle typu senzoru
     html += "<script>";
     html += "document.addEventListener('DOMContentLoaded', function() {";
     html += "  var deviceTypeSelect = document.getElementById('deviceType');";
+    html += "  var altitudeDiv = document.getElementById('altitudeDiv');";
     html += "  function updatePlaceholderVisibility() {";
     html += "    var type = parseInt(deviceTypeSelect.value);";
     html += "    console.log('Selected device type:', type);"; // Debugging
@@ -757,11 +688,17 @@ String HTMLGenerator::generateSensorAddPage()
     html += "    document.getElementById('rainRatePlaceholder').style.display = weatherDevices.includes(type) ? 'block' : 'none';";
     html += "  }";
 
+    html += "  function updateFieldVisibility() {";
+    html += "    var type = parseInt(deviceTypeSelect.value);";
+    html += "    altitudeDiv.style.display = (type === 1) ? 'block' : 'none';";
+    html += "    updatePlaceholderVisibility();"; 
+    html += "  }";
+
     // Spustíme funkci hned po načtení stránky
-    html += "  updatePlaceholderVisibility();";
+    html += "  updateFieldVisibility();";  // ZMĚNA: volat updateFieldVisibility místo updatePlaceholderVisibility
 
     // A také při změně výběru
-    html += "  deviceTypeSelect.addEventListener('change', updatePlaceholderVisibility);";
+    html += "  deviceTypeSelect.addEventListener('change', updateFieldVisibility);"; // ZMĚNA: volat updateFieldVisibility
     html += "});";
     html += "</script>";
 
@@ -806,8 +743,12 @@ String HTMLGenerator::generateSensorEditPage(const SensorData &sensor, int index
     {
         if (type.type != SensorType::UNKNOWN)
         {
-            html += "<option value='" + String(static_cast<uint8_t>(type.type)) + "'>" +
-                    String(type.name);
+            bool isSelected = (type.type == sensor.deviceType);
+            html += "<option value='" + String(static_cast<uint8_t>(type.type)) + "'";
+            if (isSelected) {
+                html += " selected";
+            }
+            html += ">" + String(type.name);
 
             // Přidání informace o schopnostech senzoru
             html += " - ";
@@ -897,10 +838,20 @@ String HTMLGenerator::generateSensorEditPage(const SensorData &sensor, int index
     html += "</div>"; // end of urlHelp
     html += "<input type='text' id='customUrl' name='customUrl' placeholder='https://example.com/api?temp=*TEMP*&hum=*HUM*' value='" + sensor.customUrl + "'>";
 
+    html += "<div id='altitudeDiv' style='display: " + 
+            String(sensor.deviceType == SensorType::BME280 ? "block" : "none") + ";'>";
+    html += "<label for='altitude'>Altitude (m) - Optional for pressure adjustment:</label>";
+    html += "<input type='number' id='altitude' name='altitude' value='" + 
+        String(sensor.altitude) + "' min='0' max='8848'>";
+    html += "<p style='font-size: 0.9em; color: #666;'>If provided, relative pressure will be converted to absolute pressure</p>";
+    html += "</div>";
+
+    // JavaScript pro aktualizaci placeholderů podle typu senzoru
     // JavaScript pro aktualizaci placeholderů podle typu senzoru
     html += "<script>";
     html += "document.addEventListener('DOMContentLoaded', function() {";
     html += "  var deviceTypeSelect = document.getElementById('deviceType');";
+    html += "  var altitudeDiv = document.getElementById('altitudeDiv');";
     html += "  function updatePlaceholderVisibility() {";
     html += "    var type = parseInt(deviceTypeSelect.value);";
     html += "    console.log('Selected device type:', type);"; // Debugging
@@ -925,11 +876,20 @@ String HTMLGenerator::generateSensorEditPage(const SensorData &sensor, int index
     html += "    document.getElementById('rainRatePlaceholder').style.display = weatherDevices.includes(type) ? 'block' : 'none';";
     html += "  }";
 
+    html += "  function updateFieldVisibility() {";
+    html += "    var type = parseInt(deviceTypeSelect.value);";
+    html += "    altitudeDiv.style.display = (type === 1) ? 'block' : 'none';";
+    html += "    updatePlaceholderVisibility();"; 
+    html += "  }";
+
+    // Nastavit správně vybranou hodnotu pro typ senzoru
+    html += "  deviceTypeSelect.value = '" + String(static_cast<uint8_t>(sensor.deviceType)) + "';";
+
     // Spustíme funkci hned po načtení stránky
-    html += "  updatePlaceholderVisibility();";
+    html += "  updateFieldVisibility();";  // ZMĚNA: volat updateFieldVisibility místo updatePlaceholderVisibility
 
     // A také při změně výběru
-    html += "  deviceTypeSelect.addEventListener('change', updatePlaceholderVisibility);";
+    html += "  deviceTypeSelect.addEventListener('change', updateFieldVisibility);"; // ZMĚNA: volat updateFieldVisibility
     html += "});";
     html += "</script>";
 

@@ -1,5 +1,21 @@
 #include "LoRaProtocol.h"
 
+// Konstanty pro přepočet tlaku
+#define G 9.80665          // tíhové zrychlení [m/s^2]
+#define M 0.0289644        // molární hmotnost vzduchu [kg/mol]
+#define R 8.3144598        // univerzální plynová konstanta [J/(mol·K)]
+#define L 0.0065           // teplotní gradient [K/m]
+
+// Přepočet relativního tlaku na absolutní
+double LoRaProtocol::relativeToAbsolutePressure(double p_rel_hpa, int altitude_m, double temp_c) {
+    if (altitude_m == 0) {
+        return p_rel_hpa;
+    }
+    double T = temp_c + 273.15;
+    double exponent = (G * M) / (R * L);
+    return p_rel_hpa / pow(1 - (L * altitude_m) / T, exponent);
+}
+
 // Konstruktor
 LoRaProtocol::LoRaProtocol(LoRaModule& module, SensorManager& manager, Logger& log)
     : loraModule(module), sensorManager(manager), logger(log), lastProcessedSensorIndex(-1) {
@@ -129,13 +145,23 @@ bool LoRaProtocol::processBME280Packet(uint8_t *data, uint8_t len, int sensorInd
         return false;
     }
     
-    // Aktualizace dat
-    bool result = sensorManager.updateSensorData(sensorIndex, temp, hum, press, 0.0f, 0.0f, voltage, rssi);
+    float adjustedPressure = press;
+    if (sensor->altitude > 0) {
+        adjustedPressure = relativeToAbsolutePressure(press, sensor->altitude, temp);
+        logger.debug("Adjusted pressure from " + String(press, 2) + " hPa to " + 
+                    String(adjustedPressure, 2) + " hPa at altitude " + 
+                    String(sensor->altitude) + " m");  // Odstraněn formátovací parametr
+    }
+    
+    // Aktualizace dat s upraveným tlakem
+    bool result = sensorManager.updateSensorData(sensorIndex, temp, hum, adjustedPressure, 
+                                               0.0f, 0.0f, voltage, rssi);
     
     if (result) {
         logger.info(sensor->name + " data updated - Temp: " + String(temp, 2) + "°C, Hum: " + 
-                   String(hum, 2) + "%, Press: " + String(press, 2) + " hPa, Batt: " + 
-                   String(voltage, 2) + "V");
+                   String(hum, 2) + "%, Press: " + String(adjustedPressure, 2) + " hPa" +
+                   (sensor->altitude > 0 ? " (adjusted from " + String(press, 2) + " hPa)" : "") +
+                   ", Batt: " + String(voltage, 2) + "V");
     }
     
     return result;

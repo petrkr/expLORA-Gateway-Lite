@@ -29,7 +29,8 @@ bool MQTTManager::init() {
 
     // Configure MQTT client
     mqttClient.setServer(configManager.mqttHost.c_str(), configManager.mqttPort);
-    
+    mqttClient.setSocketTimeout(5); 
+
     // Log initialization
     logger.info("MQTT initialized with broker: " + configManager.mqttHost + ":" + String(configManager.mqttPort));
     
@@ -235,8 +236,15 @@ String MQTTManager::buildDiscoveryJson(const SensorData& sensor, const String& v
     DynamicJsonDocument doc(1024);
     
     // Entity name
-    doc["name"] = sensor.name + " " + capitalizeFirst(valueType);
+    //doc["name"] = sensor.name + " " + capitalizeFirst(valueType);
     
+    // Use the name from the sensor if it ends with the value type
+    if (sensor.name.endsWith(capitalizeFirst(valueType))) {
+        doc["name"] = sensor.name;
+    } else {
+        doc["name"] = capitalizeFirst(valueType);  // Jen typ hodnoty
+    }
+
     // State topic
     doc["state_topic"] = stateTopic;
     
@@ -394,4 +402,114 @@ void MQTTManager::publishSensorData(int sensorIndex) {
                       String(sensor->rssi).c_str());
     
     logger.debug("Published MQTT data for sensor: " + sensor->name);
+}
+
+void MQTTManager::publishDiscoveryForSensor(int sensorIndex) {
+    if (!mqttClient.connected()) {
+        return;
+    }
+    
+    const SensorData* sensor = sensorManager.getSensor(sensorIndex);
+    if (!sensor || !sensor->configured) {
+        return;
+    }
+    
+    logger.info("Publishing MQTT discovery for sensor: " + sensor->name);
+    
+    // Base state topic for this sensor
+    String baseTopic = "explora/" + String(sensor->serialNumber, HEX);
+    
+    // Publish each value based on sensor type
+    if (sensor->hasTemperature()) {
+        mqttClient.publish((baseTopic + "/temperature").c_str(), 
+                          String(sensor->temperature, 2).c_str());
+    }
+    
+    if (sensor->hasHumidity()) {
+        mqttClient.publish((baseTopic + "/humidity").c_str(), 
+                          String(sensor->humidity, 2).c_str());
+    }
+    
+    if (sensor->hasPressure()) {
+        mqttClient.publish((baseTopic + "/pressure").c_str(), 
+                          String(sensor->pressure, 2).c_str());
+    }
+    
+    if (sensor->hasPPM()) {
+        mqttClient.publish((baseTopic + "/co2").c_str(), 
+                          String(int(sensor->ppm)).c_str());
+    }
+    
+    if (sensor->hasLux()) {
+        mqttClient.publish((baseTopic + "/illuminance").c_str(), 
+                          String(sensor->lux, 1).c_str());
+    }
+    
+    if (sensor->hasWindSpeed()) {
+        mqttClient.publish((baseTopic + "/wind_speed").c_str(), 
+                          String(sensor->windSpeed, 1).c_str());
+    }
+    
+    if (sensor->hasWindDirection()) {
+        mqttClient.publish((baseTopic + "/wind_direction").c_str(), 
+                          String(sensor->windDirection).c_str());
+    }
+    
+    if (sensor->hasRainAmount()) {
+        mqttClient.publish((baseTopic + "/rain_amount").c_str(), 
+                          String(sensor->rainAmount, 1).c_str());
+        mqttClient.publish((baseTopic + "/daily_rain").c_str(), 
+                          String(sensor->dailyRainTotal, 1).c_str());
+    }
+    
+    if (sensor->hasRainRate()) {
+        mqttClient.publish((baseTopic + "/rain_rate").c_str(), 
+                          String(sensor->rainRate, 1).c_str());
+    }
+    
+    // Battery voltage - available for all sensors
+    mqttClient.publish((baseTopic + "/battery").c_str(), 
+                      String(sensor->batteryVoltage, 2).c_str());
+    
+    // RSSI - available for all sensors
+    mqttClient.publish((baseTopic + "/rssi").c_str(), 
+                      String(sensor->rssi).c_str());
+    
+    logger.debug("Published MQTT data for sensor: " + sensor->name);
+}
+
+// Kontrola připojení
+bool MQTTManager::isConnected() {
+    return mqttClient.connected() && configManager.mqttEnabled;
+}
+
+// Odpojení od MQTT brokeru
+void MQTTManager::disconnect() {
+    if (mqttClient.connected()) {
+        logger.info("Disconnecting from MQTT broker");
+        mqttClient.disconnect();
+    }
+}
+
+// Odstranění discovery pro smazaný senzor
+void MQTTManager::removeDiscoveryForSensor(uint32_t serialNumber) {
+    if (!mqttClient.connected()) {
+        return;
+    }
+    
+    logger.info("Removing MQTT discovery for sensor with SN: " + String(serialNumber, HEX));
+    
+    // Sestavíme discovery topics pro všechny možné typy hodnot
+    String baseDiscoveryTopic = String(HA_DISCOVERY_PREFIX) + "/sensor/explora_" + 
+                                String(serialNumber, HEX) + "_";
+    
+    // Odstraníme discovery pro všechny možné typy
+    String types[] = {"temperature", "humidity", "pressure", "co2", "illuminance", 
+                      "battery", "rssi", "wind_speed", "wind_direction", 
+                      "rain_amount", "daily_rain", "rain_rate"};
+    
+    for (const auto& type : types) {
+        String topic = baseDiscoveryTopic + type + "/config";
+        mqttClient.publish(topic.c_str(), "", true); // Prázdný payload smaže discovery
+    }
 }

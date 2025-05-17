@@ -62,4 +62,7 @@ public:
 
     // Getter pro lastProcessedSensorIndex
     int getLastProcessedSensorIndex() const { return lastProcessedSensorIndex; }
+
+    // Převod relativního tlaku na absolutní tlak
+    double relativeToAbsolutePressure(double p0_hpa, int altitude_m, double temp_c);
 };

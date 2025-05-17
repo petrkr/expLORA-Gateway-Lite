@@ -53,4 +53,16 @@ public:
     
     // Publikování dat senzorů
     void publishSensorData(int sensorIndex);
+
+    // Publikování discovery pro konkrétní senzor
+    void publishDiscoveryForSensor(int sensorIndex);
+
+    // Odstranění discovery pro smazaný senzor
+    void removeDiscoveryForSensor(uint32_t serialNumber);
+    
+    // Kontrola připojení
+    bool isConnected();
+    
+    // Odpojení od MQTT brokeru
+    void disconnect();
 };

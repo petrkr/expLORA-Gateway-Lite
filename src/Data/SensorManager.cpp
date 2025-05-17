@@ -359,8 +359,9 @@ bool SensorManager::forwardSensorData(int index)
 // Update sensor configuration
 bool SensorManager::updateSensorConfig(int index, const String &name, SensorType deviceType,
                                        uint32_t serialNumber, uint32_t deviceKey,
-                                       const String &customUrl)
+                                       const String &customUrl, int altitude)
 {
+
     std::lock_guard<std::mutex> lock(sensorMutex);
 
     if (index < 0 || index >= sensorCount || !sensors[index].configured)
@@ -385,6 +386,7 @@ bool SensorManager::updateSensorConfig(int index, const String &name, SensorType
     sensors[index].serialNumber = serialNumber;
     sensors[index].deviceKey = deviceKey;
     sensors[index].customUrl = customUrl;
+    sensors[index].altitude = altitude;
 
     logger.info("Updated configuration for sensor: " + name + " (SN: " + String(serialNumber, HEX) + ")");
     saveSensors(false);
@@ -499,6 +501,7 @@ bool SensorManager::saveSensors(bool lockMutex)
             sensor["deviceKey"] = sensors[i].deviceKey;
             sensor["name"] = sensors[i].name;
             sensor["customUrl"] = sensors[i].customUrl;
+            sensor["altitude"] = sensors[i].altitude;
 
             // Uložíme i denní úhrn srážek a čas posledního resetu
             if (sensors[i].hasRainAmount())
@@ -611,6 +614,11 @@ bool SensorManager::loadSensors()
                 sensors[sensorCount].lastRainReset = 0;
             }
 
+            if (sensorObj.containsKey("altitude")) {
+                sensors[sensorCount].altitude = sensorObj["altitude"].as<int>();
+            } else {
+                sensors[sensorCount].altitude = 0;
+            }
             sensorCount++;
         }
         else

@@ -50,7 +50,7 @@ public:
     // Update sensor configuration
     bool updateSensorConfig(int index, const String& name, SensorType deviceType, 
         uint32_t serialNumber, uint32_t deviceKey, 
-        const String& customUrl);
+        const String& customUrl, int altitude);
     
     // Smazání senzoru
     bool deleteSensor(int index);

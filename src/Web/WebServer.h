@@ -7,6 +7,7 @@
 #include "../Data/SensorManager.h"
 #include "../Data/Logging.h"
 #include "../Storage/ConfigManager.h"
+#include "../Protocol/MQTTManager.h"
 
 /**
  * Třída pro správu webového portálu
@@ -18,6 +19,8 @@ class WebPortal {
 private:
     // Task handle for web server
    //TaskHandle_t webServerTaskHandle = NULL;
+    
+    MQTTManager* mqttManager; // Reference na MQTT manager
     
     // Static task function for the second core
     static void webServerTask(void *parameter);
@@ -107,4 +110,7 @@ public:
     
     // Restart webového serveru
     void restart();
+
+    // Nastavení MQTTManager reference
+    void setMqttManager(MQTTManager* manager) { mqttManager = manager; }
 };

@@ -20,6 +20,7 @@ struct SensorData {
     
     // Rozšířená konfigurace
     String customUrl;         // Complete URL with placeholders
+    int altitude;           // Nadmořská výška (m) - pro BME280
     
     // Stav senzoru
     unsigned long lastSeen;    // Čas posledního viděného paketu
@@ -51,6 +52,7 @@ struct SensorData {
         deviceKey(0),
         name(""),
         customUrl(""),
+        altitude(0),
         lastSeen(0),
         configured(false),
         temperature(0.0f),
@@ -221,7 +223,7 @@ struct SensorData {
         if (hasRainAmount()) {
             if (!first) dataStr += ", ";
             dataStr += String(rainAmount, 1) + " mm";
-            dataStr += " (denní úhrn: " + String(dailyRainTotal, 1) + " mm)";
+            dataStr += " (daily precipitation total: " + String(dailyRainTotal, 1) + " mm)";
             first = false;
         }
         

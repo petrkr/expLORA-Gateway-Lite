@@ -249,6 +249,8 @@ void setup() {
         logger.info("Web portal initialized successfully");
     }
 
+    webPortal->setMqttManager(mqttManager);
+
     // Initialize task watchdog
     esp_task_wdt_init(WDT_TIMEOUT, true); // Enable panic on timeout
     esp_task_wdt_add(NULL); // Add current task to watchdog
