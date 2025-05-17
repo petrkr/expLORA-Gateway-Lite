@@ -7,11 +7,12 @@
 #include "../config.h"
 
 // Konstruktor
-WebPortal::WebPortal(SensorManager& sensors, Logger& log, String& ssid, String& password, 
-    bool& config_mode, ConfigManager& config, String& tz)
-: server(HTTP_PORT), sensorManager(sensors), logger(log), isAPMode(false),
-wifiSSID(ssid), wifiPassword(password), configMode(config_mode), 
-timezone(tz), configManager(config), mqttManager(nullptr) {
+WebPortal::WebPortal(SensorManager &sensors, Logger &log, String &ssid, String &password,
+                     bool &config_mode, ConfigManager &config, String &tz)
+    : server(HTTP_PORT), sensorManager(sensors), logger(log), isAPMode(false),
+      wifiSSID(ssid), wifiPassword(password), configMode(config_mode),
+      timezone(tz), configManager(config), mqttManager(nullptr)
+{
 }
 
 // Add this static task function to WebPortal in WebServer.cpp
@@ -389,7 +390,8 @@ void WebPortal::handleSensorAddPost(AsyncWebServerRequest *request)
         String deviceKeyHex = request->getParam("deviceKey", true)->value();
         String customUrl = request->hasParam("customUrl", true) ? request->getParam("customUrl", true)->value() : "";
         int altitude = 0;
-        if (request->hasParam("altitude", true)) {
+        if (request->hasParam("altitude", true))
+        {
             altitude = request->getParam("altitude", true)->value().toInt();
         }
 
@@ -397,6 +399,54 @@ void WebPortal::handleSensorAddPost(AsyncWebServerRequest *request)
         SensorType deviceType = static_cast<SensorType>(deviceTypeValue);
         uint32_t serialNumber = strtoul(serialNumberHex.c_str(), NULL, 16);
         uint32_t deviceKey = strtoul(deviceKeyHex.c_str(), NULL, 16);
+
+        // Get correction values with defaults if not present
+        float tempCorr = 0.0f;
+        float humCorr = 0.0f;
+        float pressCorr = 0.0f;
+        float ppmCorr = 0.0f;
+        float luxCorr = 0.0f;
+        float windSpeedCorr = 1.0f;
+        int windDirCorr = 0;
+        float rainAmountCorr = 1.0f;
+        float rainRateCorr = 1.0f;
+
+        if (request->hasParam("tempCorr", true))
+        {
+            tempCorr = request->getParam("tempCorr", true)->value().toFloat();
+        }
+        if (request->hasParam("humCorr", true))
+        {
+            humCorr = request->getParam("humCorr", true)->value().toFloat();
+        }
+        if (request->hasParam("pressCorr", true))
+        {
+            pressCorr = request->getParam("pressCorr", true)->value().toFloat();
+        }
+        if (request->hasParam("ppmCorr", true))
+        {
+            ppmCorr = request->getParam("ppmCorr", true)->value().toFloat();
+        }
+        if (request->hasParam("luxCorr", true))
+        {
+            luxCorr = request->getParam("luxCorr", true)->value().toFloat();
+        }
+        if (request->hasParam("windSpeedCorr", true))
+        {
+            windSpeedCorr = request->getParam("windSpeedCorr", true)->value().toFloat();
+        }
+        if (request->hasParam("windDirCorr", true))
+        {
+            windDirCorr = request->getParam("windDirCorr", true)->value().toInt();
+        }
+        if (request->hasParam("rainAmountCorr", true))
+        {
+            rainAmountCorr = request->getParam("rainAmountCorr", true)->value().toFloat();
+        }
+        if (request->hasParam("rainRateCorr", true))
+        {
+            rainRateCorr = request->getParam("rainRateCorr", true)->value().toFloat();
+        }
 
         // Add sensor
         int sensorIndex = sensorManager.addSensor(deviceType, serialNumber, deviceKey, name);
@@ -409,12 +459,25 @@ void WebPortal::handleSensorAddPost(AsyncWebServerRequest *request)
             {
                 sensor->customUrl = customUrl;
                 sensor->altitude = altitude;
+
+                // Set correction values
+                sensor->temperatureCorrection = tempCorr;
+                sensor->humidityCorrection = humCorr;
+                sensor->pressureCorrection = pressCorr;
+                sensor->ppmCorrection = ppmCorr;
+                sensor->luxCorrection = luxCorr;
+                sensor->windSpeedCorrection = windSpeedCorr;
+                sensor->windDirectionCorrection = windDirCorr;
+                sensor->rainAmountCorrection = rainAmountCorr;
+                sensor->rainRateCorrection = rainRateCorr;
+
                 sensorManager.saveSensors(true);
 
                 logger.info("Added new sensor: " + name + " (SN: " + serialNumberHex + ")");
 
                 // If MQTT is enabled, publish discovery message
-                if (mqttManager && mqttManager->isConnected()) {
+                if (mqttManager && mqttManager->isConnected())
+                {
                     mqttManager->publishDiscoveryForSensor(sensorIndex);
                 }
 
@@ -474,6 +537,53 @@ void WebPortal::handleSensorEditPost(AsyncWebServerRequest *request)
         request->hasParam("serialNumber", true) &&
         request->hasParam("deviceKey", true))
     {
+        // Get form data for corrections with defaults if not present
+        float tempCorr = 0.0f;
+        float humCorr = 0.0f;
+        float pressCorr = 0.0f;
+        float ppmCorr = 0.0f;
+        float luxCorr = 0.0f;
+        float windSpeedCorr = 1.0f;
+        int windDirCorr = 0;
+        float rainAmountCorr = 1.0f;
+        float rainRateCorr = 1.0f;
+
+        if (request->hasParam("tempCorr", true))
+        {
+            tempCorr = request->getParam("tempCorr", true)->value().toFloat();
+        }
+        if (request->hasParam("humCorr", true))
+        {
+            humCorr = request->getParam("humCorr", true)->value().toFloat();
+        }
+        if (request->hasParam("pressCorr", true))
+        {
+            pressCorr = request->getParam("pressCorr", true)->value().toFloat();
+        }
+        if (request->hasParam("ppmCorr", true))
+        {
+            ppmCorr = request->getParam("ppmCorr", true)->value().toFloat();
+        }
+        if (request->hasParam("luxCorr", true))
+        {
+            luxCorr = request->getParam("luxCorr", true)->value().toFloat();
+        }
+        if (request->hasParam("windSpeedCorr", true))
+        {
+            windSpeedCorr = request->getParam("windSpeedCorr", true)->value().toFloat();
+        }
+        if (request->hasParam("windDirCorr", true))
+        {
+            windDirCorr = request->getParam("windDirCorr", true)->value().toInt();
+        }
+        if (request->hasParam("rainAmountCorr", true))
+        {
+            rainAmountCorr = request->getParam("rainAmountCorr", true)->value().toFloat();
+        }
+        if (request->hasParam("rainRateCorr", true))
+        {
+            rainRateCorr = request->getParam("rainRateCorr", true)->value().toFloat();
+        }
 
         // Get form data
         int index = request->getParam("index", true)->value().toInt();
@@ -483,7 +593,8 @@ void WebPortal::handleSensorEditPost(AsyncWebServerRequest *request)
         String deviceKeyHex = request->getParam("deviceKey", true)->value();
         String customUrl = request->hasParam("customUrl", true) ? request->getParam("customUrl", true)->value() : "";
         int altitude = 0;
-        if (request->hasParam("altitude", true)) {
+        if (request->hasParam("altitude", true))
+        {
             altitude = request->getParam("altitude", true)->value().toInt();
         }
 
@@ -493,15 +604,18 @@ void WebPortal::handleSensorEditPost(AsyncWebServerRequest *request)
         uint32_t deviceKey = strtoul(deviceKeyHex.c_str(), NULL, 16);
 
         // Update sensor - Update this function parameter list too (see next step)
-        bool success = sensorManager.updateSensorConfig(index, name, deviceType, serialNumber, 
-                                               deviceKey, customUrl, altitude);
+        bool success = sensorManager.updateSensorConfig(
+            index, name, deviceType, serialNumber, deviceKey, customUrl, altitude,
+            tempCorr, humCorr, pressCorr, ppmCorr, luxCorr,
+            windSpeedCorr, windDirCorr, rainAmountCorr, rainRateCorr);
 
         if (success)
         {
             logger.info("Updated sensor: " + name + " (SN: " + serialNumberHex + ")");
 
             // If MQTT is enabled, publish discovery message
-            if (mqttManager && mqttManager->isConnected()) {
+            if (mqttManager && mqttManager->isConnected())
+            {
                 logger.info("Updating MQTT discovery for edited sensor");
                 mqttManager->publishDiscoveryForSensor(index);
             }
@@ -548,7 +662,8 @@ void WebPortal::handleSensorDelete(AsyncWebServerRequest *request)
                 logger.info("Deleted sensor: " + name + " (SN: " + String(serialNumber, HEX) + ")");
 
                 // If MQTT is enabled, remove discovery message
-                if (mqttManager && mqttManager->isConnected()) {
+                if (mqttManager && mqttManager->isConnected())
+                {
                     logger.info("Removing MQTT discovery for deleted sensor");
                     mqttManager->removeDiscoveryForSensor(serialNumber);
                 }
@@ -664,7 +779,8 @@ void WebPortal::handleMqttPost(AsyncWebServerRequest *request)
         logger.info("MQTT configuration updated: " + host + ":" + String(port) + ", enabled: " + String(enabled));
 
         // If MQTT is enabled, reinitialize the MQTT manager
-        if (mqttManager) {
+        if (mqttManager)
+        {
             logger.info("Reinitializing MQTT with new configuration...");
             mqttManager->disconnect();
             mqttManager->init();

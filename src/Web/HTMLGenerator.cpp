@@ -262,17 +262,19 @@ String HTMLGenerator::generateHomePage(const std::vector<SensorData> &sensors)
     }
 
     unsigned long seconds = millis() / 1000;
-    unsigned int days    = seconds / 86400;           // 24*60*60
-    unsigned int hours   = (seconds % 86400) / 3600;  // rest of the day
-    unsigned int minutes = (seconds % 3600) / 60;     // rest of the hour
-    unsigned int secs    = seconds % 60;
-    
-    html  += "<p><strong>Uptime:</strong> ";
-    if (days)               html += String(days)    + " d ";
-    if (days || hours)      html += String(hours)   + " h ";
+    unsigned int days = seconds / 86400;           // 24*60*60
+    unsigned int hours = (seconds % 86400) / 3600; // rest of the day
+    unsigned int minutes = (seconds % 3600) / 60;  // rest of the hour
+    unsigned int secs = seconds % 60;
+
+    html += "<p><strong>Uptime:</strong> ";
+    if (days)
+        html += String(days) + " d ";
+    if (days || hours)
+        html += String(hours) + " h ";
     if (days || hours || minutes)
-                           html += String(minutes) + " m ";
-    html += String(secs)    + " s</p>";
+        html += String(minutes) + " m ";
+    html += String(secs) + " s</p>";
 
     html += "</div>";
 
@@ -405,25 +407,30 @@ String HTMLGenerator::generateConfigPage(const String &ssid, const String &passw
     html += "<select id='timezone' name='timezone'>";
 
     html += "<option value='GMT0'";
-    if (timezone == "GMT0") html += " selected";
+    if (timezone == "GMT0")
+        html += " selected";
     html += ">GMT/UTC (00:00)</option>";
-     
+
     html += "<option value='WET0WEST,M3.5.0/1,M10.5.0'";
-    if (timezone == "WET0WEST,M3.5.0/1,M10.5.0") html += " selected";
+    if (timezone == "WET0WEST,M3.5.0/1,M10.5.0")
+        html += " selected";
     html += ">Western European (WET/WEST)</option>";
-     
+
     html += "<option value='CET-1CEST,M3.5.0,M10.5.0/3'";
-    if (timezone == "CET-1CEST,M3.5.0,M10.5.0/3") html += " selected";
+    if (timezone == "CET-1CEST,M3.5.0,M10.5.0/3")
+        html += " selected";
     html += ">Central European (CET/CEST)</option>";
-     
+
     html += "<option value='EET-2EEST,M3.5.0/3,M10.5.0/4'";
-    if (timezone == "EET-2EEST,M3.5.0/3,M10.5.0/4") html += " selected";
+    if (timezone == "EET-2EEST,M3.5.0/3,M10.5.0/4")
+        html += " selected";
     html += ">Eastern European (EET/EEST)</option>";
-     
+
     html += "<option value='MSK-3'";
-    if (timezone == "MSK-3") html += " selected";
+    if (timezone == "MSK-3")
+        html += " selected";
     html += ">Moscow Time (MSK)</option>";
-     
+
     html += "<input type='submit' value='Save and Restart'>";
     html += "</form>";
     html += "</div>";
@@ -435,7 +442,8 @@ String HTMLGenerator::generateConfigPage(const String &ssid, const String &passw
 }
 
 // Generate MQTT Configuration Page
-String HTMLGenerator::generateMqttPage(const String& host, int port, const String& user, const String& password, bool enabled) {
+String HTMLGenerator::generateMqttPage(const String &host, int port, const String &user, const String &password, bool enabled)
+{
     String html;
 
     // Add header
@@ -446,37 +454,37 @@ String HTMLGenerator::generateMqttPage(const String& host, int port, const Strin
     html += "<h2>MQTT Settings</h2>";
     html += "<p>Configure connection to Home Assistant MQTT broker for automatic sensor discovery.</p>";
     html += "<form method='post' action='/mqtt'>";
-    
+
     // Enable MQTT checkbox
     html += "<div class='form-group'>";
     html += "<label for='enabled'>Enable MQTT:</label>";
     html += "<input type='checkbox' id='enabled' name='enabled' value='1'" + String(enabled ? " checked" : "") + ">";
     html += "</div>";
-    
+
     // MQTT Broker Host
     html += "<div class='form-group'>";
     html += "<label for='host'>MQTT Broker Host:</label>";
     html += "<input type='text' id='host' name='host' value='" + host + "' required>";
     html += "</div>";
-    
+
     // MQTT Port
     html += "<div class='form-group'>";
     html += "<label for='port'>MQTT Port:</label>";
     html += "<input type='number' id='port' name='port' value='" + String(port) + "' required min='1' max='65535'>";
     html += "</div>";
-    
+
     // Username
     html += "<div class='form-group'>";
     html += "<label for='user'>Username (optional):</label>";
     html += "<input type='text' id='user' name='user' value='" + user + "'>";
     html += "</div>";
-    
+
     // Password
     html += "<div class='form-group'>";
     html += "<label for='password'>Password (optional):</label>";
     html += "<input type='password' id='password' name='password' value='" + password + "'>";
     html += "</div>";
-    
+
     html += "<input type='submit' value='Save MQTT Settings'>";
     html += "</form></div>";
 
@@ -597,7 +605,6 @@ String HTMLGenerator::generateSensorAddPage()
                 html += (first ? "" : ", ") + String("Light");
             }
 
-
             if (type.hasRainAmount)
             {
                 html += (first ? "" : ", ") + String("Rain");
@@ -652,18 +659,123 @@ String HTMLGenerator::generateSensorAddPage()
     html += "</div>"; // end of urlHelp
     html += "<input type='text' id='customUrl' name='customUrl' placeholder='https://example.com/api?temp=*TEMP*&hum=*HUM*'>";
 
-    // Altitude field pro BME280 (zobrazí se jen když je vybraný BME280)
-    html += "<div id='altitudeDiv' style='display: none;'>";
-    html += "<label for='altitude'>Altitude (m) - Optional for pressure adjustment:</label>";
-    html += "<input type='number' id='altitude' name='altitude' placeholder='e.g. 320' min='0' max='8848'>";
-    html += "<p style='font-size: 0.9em; color: #666;'>If provided, relative pressure will be converted to absolute pressure</p>";
+    html += "<h3 style='margin-top: 20px;'>Sensor Reading Corrections</h3>";
+    html += "<p>Adjust sensor readings by adding offsets or applying multipliers. Leave at 0 for no correction.</p>";
+
+    // Create a container for correction inputs with two columns
+    html += "<div style='display: grid; grid-template-columns: 1fr 1fr; gap: 10px;'>";
+
+    // Add the correction fields with ids that match the dynamic visibility code
+    html += "<div id='tempCorrDiv' style='display: none;'>";
+    html += "<label for='tempCorr'>Temperature Correction (±°C):</label>";
+    html += "<input type='number' id='tempCorr' name='tempCorr' value='0.0' step='0.1'>";
+    html += "<small>Positive values increase the reading, negative values decrease it</small>";
     html += "</div>";
 
-    // JavaScript pro aktualizaci placeholderů podle typu senzoru
+    // Add similar divs for other correction fields with default values
+    // Humidity
+    html += "<div id='humCorrDiv' style='display: none;'>";
+    html += "<label for='humCorr'>Humidity Correction (±%):</label>";
+    html += "<input type='number' id='humCorr' name='humCorr' value='0.0' step='0.1'>";
+    html += "<small>Positive values increase the reading, negative values decrease it</small>";
+    html += "</div>";
+
+    // Pressure
+    html += "<div id='pressCorrDiv' style='display: none;'>";
+    html += "<label for='pressCorr'>Pressure Correction (±hPa):</label>";
+    html += "<input type='number' id='pressCorr' name='pressCorr' value='0.0' step='0.1'>";
+    html += "<small>Positive values increase the reading, negative values decrease it</small>";
+    html += "</div>";
+
+    // CO2
+    html += "<div id='ppmCorrDiv' style='display: none;'>";
+    html += "<label for='ppmCorr'>CO2 Correction (±ppm):</label>";
+    html += "<input type='number' id='ppmCorr' name='ppmCorr' value='0' step='1'>";
+    html += "<small>Positive values increase the reading, negative values decrease it</small>";
+    html += "</div>";
+
+    // Lux
+    html += "<div id='luxCorrDiv' style='display: none;'>";
+    html += "<label for='luxCorr'>Light Correction (±lux):</label>";
+    html += "<input type='number' id='luxCorr' name='luxCorr' value='0.0' step='0.1'>";
+    html += "<small>Positive values increase the reading, negative values decrease it</small>";
+    html += "</div>";
+
+    // Wind speed
+    html += "<div id='windSpeedCorrDiv' style='display: none;'>";
+    html += "<label for='windSpeedCorr'>Wind Speed Correction (multiplier):</label>";
+    html += "<input type='number' id='windSpeedCorr' name='windSpeedCorr' value='1.0' step='0.01' min='0.1' max='10'>";
+    html += "<small>Values greater than 1.0 increase the reading, less than 1.0 decrease it</small>";
+    html += "</div>";
+
+    // Wind direction
+    html += "<div id='windDirCorrDiv' style='display: none;'>";
+    html += "<label for='windDirCorr'>Wind Direction Correction (±degrees):</label>";
+    html += "<input type='number' id='windDirCorr' name='windDirCorr' value='0' step='1' min='-180' max='180'>";
+    html += "<small>Positive values rotate clockwise, negative counter-clockwise</small>";
+    html += "</div>";
+
+    // Rain amount
+    html += "<div id='rainAmountCorrDiv' style='display: none;'>";
+    html += "<label for='rainAmountCorr'>Rain Amount Correction (multiplier):</label>";
+    html += "<input type='number' id='rainAmountCorr' name='rainAmountCorr' value='1.0' step='0.01' min='0.1' max='10'>";
+    html += "<small>Values greater than 1.0 increase the reading, less than 1.0 decrease it</small>";
+    html += "</div>";
+
+    // Rain rate
+    html += "<div id='rainRateCorrDiv' style='display: none;'>";
+    html += "<label for='rainRateCorr'>Rain Rate Correction (multiplier):</label>";
+    html += "<input type='number' id='rainRateCorr' name='rainRateCorr' value='1.0' step='0.01' min='0.1' max='10'>";
+    html += "<small>Values greater than 1.0 increase the reading, less than 1.0 decrease it</small>";
+    html += "</div>";
+
+    // Altitude correction
+    html += "<div id='altitudeCorrDiv' style='display: none;'>";
+    html += "<label for='altitude'>Altitude (m) - For pressure adjustment:</label>";
+    html += "<input type='number' id='altitude' name='altitude' value='0' min='0' max='8848'>";
+    html += "<small>Used to convert relative pressure to absolute pressure</small>";
+    html += "</div>";
+
+    html += "</div>"; // End of grid
+
+    // Tlačítka
+    html += "<input type='submit' value='Add Sensor'>";
+    html += "<a href='/sensors' class='btn' style='background: #999;'>Cancel</a>";
+    html += "</form>";
+    html += "</div>";
     html += "<script>";
     html += "document.addEventListener('DOMContentLoaded', function() {";
     html += "  var deviceTypeSelect = document.getElementById('deviceType');";
     html += "  var altitudeDiv = document.getElementById('altitudeDiv');";
+    html += "  function updateFieldVisibility() {";
+    html += "    var type = parseInt(deviceTypeSelect.value);";
+    html += "    console.log('Selected device type:', type);";
+
+    // Define which devices have which capabilities
+    html += "    var tempHumDevices = [1, 2, 3];"; // BME280, SCD40, METEO
+    html += "    var pressureDevices = [1, 3];";   // BME280, METEO
+    html += "    var co2Devices = [2];";           // SCD40
+    html += "    var luxDevices = [4];";           // VEML7700
+    html += "    var weatherDevices = [3];";       // METEO
+
+    // Update regular fields
+    html += "    document.getElementById('altitudeCorrDiv').style.display = pressureDevices.includes(type) ? 'block' : 'none';";
+
+    // Update correction fields
+    html += "    document.getElementById('tempCorrDiv').style.display = tempHumDevices.includes(type) ? 'block' : 'none';";
+    html += "    document.getElementById('humCorrDiv').style.display = tempHumDevices.includes(type) ? 'block' : 'none';";
+    html += "    document.getElementById('pressCorrDiv').style.display = pressureDevices.includes(type) ? 'block' : 'none';";
+    html += "    document.getElementById('ppmCorrDiv').style.display = co2Devices.includes(type) ? 'block' : 'none';";
+    html += "    document.getElementById('luxCorrDiv').style.display = luxDevices.includes(type) ? 'block' : 'none';";
+    html += "    document.getElementById('windSpeedCorrDiv').style.display = weatherDevices.includes(type) ? 'block' : 'none';";
+    html += "    document.getElementById('windDirCorrDiv').style.display = weatherDevices.includes(type) ? 'block' : 'none';";
+    html += "    document.getElementById('rainAmountCorrDiv').style.display = weatherDevices.includes(type) ? 'block' : 'none';";
+    html += "    document.getElementById('rainRateCorrDiv').style.display = weatherDevices.includes(type) ? 'block' : 'none';";
+
+    // Update placeholder visibility
+    html += "    updatePlaceholderVisibility();";
+    html += "  }";
+
     html += "  function updatePlaceholderVisibility() {";
     html += "    var type = parseInt(deviceTypeSelect.value);";
     html += "    console.log('Selected device type:', type);"; // Debugging
@@ -688,26 +800,11 @@ String HTMLGenerator::generateSensorAddPage()
     html += "    document.getElementById('rainRatePlaceholder').style.display = weatherDevices.includes(type) ? 'block' : 'none';";
     html += "  }";
 
-    html += "  function updateFieldVisibility() {";
-    html += "    var type = parseInt(deviceTypeSelect.value);";
-    html += "    altitudeDiv.style.display = (type === 1) ? 'block' : 'none';";
-    html += "    updatePlaceholderVisibility();"; 
-    html += "  }";
-
-    // Spustíme funkci hned po načtení stránky
-    html += "  updateFieldVisibility();";  // ZMĚNA: volat updateFieldVisibility místo updatePlaceholderVisibility
-
-    // A také při změně výběru
-    html += "  deviceTypeSelect.addEventListener('change', updateFieldVisibility);"; // ZMĚNA: volat updateFieldVisibility
+    // Run updateFieldVisibility when the page loads and when the type changes
+    html += "  updateFieldVisibility();";
+    html += "  deviceTypeSelect.addEventListener('change', updateFieldVisibility);";
     html += "});";
     html += "</script>";
-
-    // Tlačítka
-    html += "<input type='submit' value='Add Sensor'>";
-    html += "<a href='/sensors' class='btn' style='background: #999;'>Cancel</a>";
-    html += "</form>";
-    html += "</div>";
-
     // Přidání patičky
     addHtmlFooter(html);
 
@@ -745,7 +842,8 @@ String HTMLGenerator::generateSensorEditPage(const SensorData &sensor, int index
         {
             bool isSelected = (type.type == sensor.deviceType);
             html += "<option value='" + String(static_cast<uint8_t>(type.type)) + "'";
-            if (isSelected) {
+            if (isSelected)
+            {
                 html += " selected";
             }
             html += ">" + String(type.name);
@@ -838,20 +936,150 @@ String HTMLGenerator::generateSensorEditPage(const SensorData &sensor, int index
     html += "</div>"; // end of urlHelp
     html += "<input type='text' id='customUrl' name='customUrl' placeholder='https://example.com/api?temp=*TEMP*&hum=*HUM*' value='" + sensor.customUrl + "'>";
 
-    html += "<div id='altitudeDiv' style='display: " + 
-            String(sensor.deviceType == SensorType::BME280 ? "block" : "none") + ";'>";
-    html += "<label for='altitude'>Altitude (m) - Optional for pressure adjustment:</label>";
-    html += "<input type='number' id='altitude' name='altitude' value='" + 
-        String(sensor.altitude) + "' min='0' max='8848'>";
-    html += "<p style='font-size: 0.9em; color: #666;'>If provided, relative pressure will be converted to absolute pressure</p>";
+    html += "<h3 style='margin-top: 20px;'>Sensor Reading Corrections</h3>";
+    html += "<p>Adjust sensor readings by adding offsets or applying multipliers. Leave at 0 for no correction.</p>";
+
+    // Create a container for correction inputs with two columns
+    html += "<div style='display: grid; grid-template-columns: 1fr 1fr; gap: 10px;'>";
+
+    // Temperature correction
+    html += "<div id='tempCorrDiv' style='display: " +
+            String(sensor.hasTemperature() ? "block" : "none") + ";'>";
+    html += "<label for='tempCorr'>Temperature Correction (±°C):</label>";
+    html += "<input type='number' id='tempCorr' name='tempCorr' value='" +
+            String(sensor.temperatureCorrection, 2) + "' step='0.1'>";
+    html += "<small>Positive values increase the reading, negative values decrease it</small>";
     html += "</div>";
 
-    // JavaScript pro aktualizaci placeholderů podle typu senzoru
-    // JavaScript pro aktualizaci placeholderů podle typu senzoru
+    // Humidity correction
+    html += "<div id='humCorrDiv' style='display: " +
+            String(sensor.hasHumidity() ? "block" : "none") + ";'>";
+    html += "<label for='humCorr'>Humidity Correction (±%):</label>";
+    html += "<input type='number' id='humCorr' name='humCorr' value='" +
+            String(sensor.humidityCorrection, 2) + "' step='0.1'>";
+    html += "<small>Positive values increase the reading, negative values decrease it</small>";
+    html += "</div>";
+
+    // Pressure correction
+    html += "<div id='pressCorrDiv' style='display: " +
+            String(sensor.hasPressure() ? "block" : "none") + ";'>";
+    html += "<label for='pressCorr'>Pressure Correction (±hPa):</label>";
+    html += "<input type='number' id='pressCorr' name='pressCorr' value='" +
+            String(sensor.pressureCorrection, 2) + "' step='0.1'>";
+    html += "<small>Positive values increase the reading, negative values decrease it</small>";
+    html += "</div>";
+
+    // CO2 correction
+    html += "<div id='ppmCorrDiv' style='display: " +
+            String(sensor.hasPPM() ? "block" : "none") + ";'>";
+    html += "<label for='ppmCorr'>CO2 Correction (±ppm):</label>";
+    html += "<input type='number' id='ppmCorr' name='ppmCorr' value='" +
+            String(sensor.ppmCorrection, 0) + "' step='1'>";
+    html += "<small>Positive values increase the reading, negative values decrease it</small>";
+    html += "</div>";
+
+    // Light correction
+    html += "<div id='luxCorrDiv' style='display: " +
+            String(sensor.hasLux() ? "block" : "none") + ";'>";
+    html += "<label for='luxCorr'>Light Correction (±lux):</label>";
+    html += "<input type='number' id='luxCorr' name='luxCorr' value='" +
+            String(sensor.luxCorrection, 1) + "' step='0.1'>";
+    html += "<small>Positive values increase the reading, negative values decrease it</small>";
+    html += "</div>";
+
+    // Wind speed correction
+    html += "<div id='windSpeedCorrDiv' style='display: " +
+            String(sensor.hasWindSpeed() ? "block" : "none") + ";'>";
+    html += "<label for='windSpeedCorr'>Wind Speed Correction (multiplier):</label>";
+    html += "<input type='number' id='windSpeedCorr' name='windSpeedCorr' value='" +
+            String(sensor.windSpeedCorrection, 2) + "' step='0.01' min='0.1' max='10'>";
+    html += "<small>Values greater than 1.0 increase the reading, less than 1.0 decrease it</small>";
+    html += "</div>";
+
+    // Wind direction correction
+    html += "<div id='windDirCorrDiv' style='display: " +
+            String(sensor.hasWindDirection() ? "block" : "none") + ";'>";
+    html += "<label for='windDirCorr'>Wind Direction Correction (±degrees):</label>";
+    html += "<input type='number' id='windDirCorr' name='windDirCorr' value='" +
+            String(sensor.windDirectionCorrection) + "' step='1' min='-180' max='180'>";
+    html += "<small>Positive values rotate clockwise, negative counter-clockwise</small>";
+    html += "</div>";
+
+    // Rain amount correction
+    html += "<div id='rainAmountCorrDiv' style='display: " +
+            String(sensor.hasRainAmount() ? "block" : "none") + ";'>";
+    html += "<label for='rainAmountCorr'>Rain Amount Correction (multiplier):</label>";
+    html += "<input type='number' id='rainAmountCorr' name='rainAmountCorr' value='" +
+            String(sensor.rainAmountCorrection, 2) + "' step='0.01' min='0.1' max='10'>";
+    html += "<small>Values greater than 1.0 increase the reading, less than 1.0 decrease it</small>";
+    html += "</div>";
+
+    // Rain rate correction
+    html += "<div id='rainRateCorrDiv' style='display: " +
+            String(sensor.hasRainRate() ? "block" : "none") + ";'>";
+    html += "<label for='rainRateCorr'>Rain Rate Correction (multiplier):</label>";
+    html += "<input type='number' id='rainRateCorr' name='rainRateCorr' value='" +
+            String(sensor.rainRateCorrection, 2) + "' step='0.01' min='0.1' max='10'>";
+    html += "<small>Values greater than 1.0 increase the reading, less than 1.0 decrease it</small>";
+    html += "</div>";
+
+    // Altitude - show for all pressure sensors
+    html += "<div id='altitudeCorrDiv' style='display: " +
+            String(sensor.hasPressure() ? "block" : "none") + ";'>";
+    html += "<label for='altitude'>Altitude (m) - For pressure adjustment:</label>";
+    html += "<input type='number' id='altitude' name='altitude' value='" +
+            String(sensor.altitude) + "' min='0' max='8848'>";
+    html += "<small>Used to convert relative pressure to absolute pressure</small>";
+    html += "</div>";
+
+    html += "</div>"; // End of grid for corrections
+
+    // Tlačítka - keep all buttons at the end of the form
+    html += "<div style='margin-top: 20px;'>";
+    html += "<input type='submit' value='Update Sensor'>";
+    html += "<a href='/sensors' class='btn' style='background: #999;'>Cancel</a>";
+    html += "</div>";
+
+    html += "</form>"; // End of form - make sure this comes after all inputs
+    html += "</div>";  // End of card
+
+    // Enhanced JavaScript to dynamically update both sensor-specific fields and correction fields
     html += "<script>";
     html += "document.addEventListener('DOMContentLoaded', function() {";
     html += "  var deviceTypeSelect = document.getElementById('deviceType');";
     html += "  var altitudeDiv = document.getElementById('altitudeDiv');";
+
+    // Create an update function that handles both regular fields and correction fields
+    html += "  function updateFieldVisibility() {";
+    html += "    var type = parseInt(deviceTypeSelect.value);";
+    html += "    console.log('Selected device type:', type);";
+
+    // Define which devices have which capabilities
+    html += "    var tempHumDevices = [1, 2, 3];"; // BME280, SCD40, METEO
+    html += "    var pressureDevices = [1, 3];";   // BME280, METEO
+    html += "    var co2Devices = [2];";           // SCD40
+    html += "    var luxDevices = [4];";           // VEML7700
+    html += "    var weatherDevices = [3];";       // METEO
+
+    // Update regular fields
+    html += "    document.getElementById('altitudeCorrDiv').style.display = pressureDevices.includes(type) ? 'block' : 'none';";
+
+    // Update correction fields
+    html += "    document.getElementById('tempCorrDiv').style.display = tempHumDevices.includes(type) ? 'block' : 'none';";
+    html += "    document.getElementById('humCorrDiv').style.display = tempHumDevices.includes(type) ? 'block' : 'none';";
+    html += "    document.getElementById('pressCorrDiv').style.display = pressureDevices.includes(type) ? 'block' : 'none';";
+    html += "    document.getElementById('ppmCorrDiv').style.display = co2Devices.includes(type) ? 'block' : 'none';";
+    html += "    document.getElementById('luxCorrDiv').style.display = luxDevices.includes(type) ? 'block' : 'none';";
+    html += "    document.getElementById('windSpeedCorrDiv').style.display = weatherDevices.includes(type) ? 'block' : 'none';";
+    html += "    document.getElementById('windDirCorrDiv').style.display = weatherDevices.includes(type) ? 'block' : 'none';";
+    html += "    document.getElementById('rainAmountCorrDiv').style.display = weatherDevices.includes(type) ? 'block' : 'none';";
+    html += "    document.getElementById('rainRateCorrDiv').style.display = weatherDevices.includes(type) ? 'block' : 'none';";
+
+    // Update placeholders visibility (from existing code)
+    html += "    updatePlaceholderVisibility();";
+    html += "  }";
+
+    // Keep your existing placeholder visibility updating code
     html += "  function updatePlaceholderVisibility() {";
     html += "    var type = parseInt(deviceTypeSelect.value);";
     html += "    console.log('Selected device type:', type);"; // Debugging
@@ -876,28 +1104,14 @@ String HTMLGenerator::generateSensorEditPage(const SensorData &sensor, int index
     html += "    document.getElementById('rainRatePlaceholder').style.display = weatherDevices.includes(type) ? 'block' : 'none';";
     html += "  }";
 
-    html += "  function updateFieldVisibility() {";
-    html += "    var type = parseInt(deviceTypeSelect.value);";
-    html += "    altitudeDiv.style.display = (type === 1) ? 'block' : 'none';";
-    html += "    updatePlaceholderVisibility();"; 
-    html += "  }";
-
-    // Nastavit správně vybranou hodnotu pro typ senzoru
+    // Make sure the form is set to the current sensor type
     html += "  deviceTypeSelect.value = '" + String(static_cast<uint8_t>(sensor.deviceType)) + "';";
 
-    // Spustíme funkci hned po načtení stránky
-    html += "  updateFieldVisibility();";  // ZMĚNA: volat updateFieldVisibility místo updatePlaceholderVisibility
-
-    // A také při změně výběru
-    html += "  deviceTypeSelect.addEventListener('change', updateFieldVisibility);"; // ZMĚNA: volat updateFieldVisibility
+    // Run the update function initially and add event listener for changes
+    html += "  updateFieldVisibility();";
+    html += "  deviceTypeSelect.addEventListener('change', updateFieldVisibility);";
     html += "});";
     html += "</script>";
-
-    // Tlačítka
-    html += "<input type='submit' value='Update Sensor'>";
-    html += "<a href='/sensors' class='btn' style='background: #999;'>Cancel</a>";
-    html += "</form>";
-    html += "</div>";
 
     // Přidání patičky
     addHtmlFooter(html);

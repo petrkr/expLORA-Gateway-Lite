@@ -41,6 +41,16 @@ struct SensorData {
     float dailyRainTotal;     // Denní úhrn srážek (mm) - resetuje se o půlnoci
     unsigned long lastRainReset; // Časová značka posledního resetu denního úhrnu
 
+    float temperatureCorrection;   // Correction offset for temperature
+    float humidityCorrection;      // Correction offset for humidity
+    float pressureCorrection;      // Correction offset for pressure
+    float ppmCorrection;           // Correction offset for CO2 concentration
+    float luxCorrection;           // Correction offset for light intensity
+    float windSpeedCorrection;     // Correction factor for wind speed (multiplier)
+    int windDirectionCorrection;   // Correction offset for wind direction (degrees)
+    float rainAmountCorrection;    // Correction factor for rain amount (multiplier)
+    float rainRateCorrection;      // Correction factor for rain rate (multiplier)
+
     // Obecná data zařízení
     float batteryVoltage;      // Napětí baterie (V)
     int rssi;                  // Síla signálu (dBm)
@@ -67,7 +77,16 @@ struct SensorData {
         rainAmount(0.0f),
         rainRate(0.0f),
         dailyRainTotal(0.0f),
-        lastRainReset(0)
+        lastRainReset(0),
+        temperatureCorrection(0.0f),
+        humidityCorrection(0.0f),
+        pressureCorrection(0.0f),
+        ppmCorrection(0.0f),
+        luxCorrection(0.0f),
+        windSpeedCorrection(1.0f),   // Multiplier of 1.0 = no change
+        windDirectionCorrection(0),
+        rainAmountCorrection(1.0f),
+        rainRateCorrection(1.0f)
     {}
     
     // Pomocné metody pro ověření, zda senzor poskytuje určitý typ dat

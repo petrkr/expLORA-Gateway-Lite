@@ -144,6 +144,97 @@ bool SensorManager::updateSensorData(int index, float temperature, float humidit
         return false;
     }
 
+    // Store original values for logging
+    float originalTemp = temperature;
+    float originalHum = humidity;
+    float originalPress = pressure;
+    float originalPPM = ppm;
+    float originalLux = lux;
+    float originalWindSpeed = windSpeed;
+    uint16_t originalWindDir = windDirection;
+    float originalRainAmount = rainAmount;
+    float originalRainRate = rainRate;
+
+    // Apply corrections to input values before updating
+    temperature += sensors[index].temperatureCorrection;
+    humidity += sensors[index].humidityCorrection;
+    pressure += sensors[index].pressureCorrection;
+    ppm += sensors[index].ppmCorrection;
+    lux += sensors[index].luxCorrection;
+    windSpeed *= sensors[index].windSpeedCorrection;
+
+    // For wind direction, ensure value stays in 0-359 range
+    windDirection = (windDirection + sensors[index].windDirectionCorrection) % 360;
+
+    rainAmount *= sensors[index].rainAmountCorrection;
+    rainRate *= sensors[index].rainRateCorrection;
+
+    // Log if corrections were applied
+    bool correctionsApplied = false;
+    String correctionLog = "Corrections applied to " + sensors[index].name + ": ";
+
+    if (sensors[index].hasTemperature() && sensors[index].temperatureCorrection != 0)
+    {
+        correctionLog += "Temp " + String(originalTemp, 2) + "→" + String(temperature, 2) + "°C, ";
+        correctionsApplied = true;
+    }
+
+    if (sensors[index].hasHumidity() && sensors[index].humidityCorrection != 0)
+    {
+        correctionLog += "Hum " + String(originalHum, 2) + "→" + String(humidity, 2) + "%, ";
+        correctionsApplied = true;
+    }
+
+    if (sensors[index].hasPressure() && sensors[index].pressureCorrection != 0)
+    {
+        correctionLog += "Press " + String(originalPress, 2) + "→" + String(pressure, 2) + "hPa, ";
+        correctionsApplied = true;
+    }
+
+    if (sensors[index].hasPPM() && sensors[index].ppmCorrection != 0)
+    {
+        correctionLog += "CO2 " + String(originalPPM, 0) + "→" + String(ppm, 0) + "ppm, ";
+        correctionsApplied = true;
+    }
+
+    if (sensors[index].hasLux() && sensors[index].luxCorrection != 0)
+    {
+        correctionLog += "Lux " + String(originalLux, 1) + "→" + String(lux, 1) + "lx, ";
+        correctionsApplied = true;
+    }
+
+    if (sensors[index].hasWindSpeed() && sensors[index].windSpeedCorrection != 1.0f)
+    {
+        correctionLog += "Wind " + String(originalWindSpeed, 1) + "→" + String(windSpeed, 1) + "m/s, ";
+        correctionsApplied = true;
+    }
+
+    if (sensors[index].hasWindDirection() && sensors[index].windDirectionCorrection != 0)
+    {
+        correctionLog += "Dir " + String(originalWindDir) + "→" + String(windDirection) + "°, ";
+        correctionsApplied = true;
+    }
+
+    if (sensors[index].hasRainAmount() && sensors[index].rainAmountCorrection != 1.0f)
+    {
+        correctionLog += "Rain " + String(originalRainAmount, 1) + "→" + String(rainAmount, 1) + "mm, ";
+        correctionsApplied = true;
+    }
+
+    if (sensors[index].hasRainRate() && sensors[index].rainRateCorrection != 1.0f)
+    {
+        correctionLog += "Rate " + String(originalRainRate, 1) + "→" + String(rainRate, 1) + "mm/h, ";
+        correctionsApplied = true;
+    }
+
+    // Log corrections if any were applied
+    if (correctionsApplied)
+    {
+        // Remove trailing comma and space
+        correctionLog = correctionLog.substring(0, correctionLog.length() - 2);
+        logger.debug(correctionLog);
+    }
+
     // Aktualizujeme pouze relevantní hodnoty podle typu senzoru
     if (sensors[index].hasTemperature())
     {
@@ -359,9 +450,12 @@ bool SensorManager::forwardSensorData(int index)
 // Update sensor configuration
 bool SensorManager::updateSensorConfig(int index, const String &name, SensorType deviceType,
                                        uint32_t serialNumber, uint32_t deviceKey,
-                                       const String &customUrl, int altitude)
+                                       const String &customUrl, int altitude,
+                                       float tempCorr, float humCorr, float pressCorr,
+                                       float ppmCorr, float luxCorr,
+                                       float windSpeedCorr, int windDirCorr,
+                                       float rainAmountCorr, float rainRateCorr)
 {
-
     std::lock_guard<std::mutex> lock(sensorMutex);
 
     if (index < 0 || index >= sensorCount || !sensors[index].configured)
@@ -380,13 +474,24 @@ bool SensorManager::updateSensorConfig(int index, const String &name, SensorType
         return false;
     }
 
-    // Update configuration
+    // Update basic configuration
     sensors[index].name = name;
     sensors[index].deviceType = deviceType;
     sensors[index].serialNumber = serialNumber;
     sensors[index].deviceKey = deviceKey;
     sensors[index].customUrl = customUrl;
     sensors[index].altitude = altitude;
+
+    // Update correction values
+    sensors[index].temperatureCorrection = tempCorr;
+    sensors[index].humidityCorrection = humCorr;
+    sensors[index].pressureCorrection = pressCorr;
+    sensors[index].ppmCorrection = ppmCorr;
+    sensors[index].luxCorrection = luxCorr;
+    sensors[index].windSpeedCorrection = windSpeedCorr;
+    sensors[index].windDirectionCorrection = windDirCorr;
+    sensors[index].rainAmountCorrection = rainAmountCorr;
+    sensors[index].rainRateCorrection = rainRateCorr;
 
     logger.info("Updated configuration for sensor: " + name + " (SN: " + String(serialNumber, HEX) + ")");
     saveSensors(false);
@@ -509,6 +614,16 @@ bool SensorManager::saveSensors(bool lockMutex)
                 sensor["dailyRainTotal"] = sensors[i].dailyRainTotal;
                 sensor["lastRainReset"] = sensors[i].lastRainReset;
             }
+
+            sensor["temperatureCorrection"] = sensors[i].temperatureCorrection;
+            sensor["humidityCorrection"] = sensors[i].humidityCorrection;
+            sensor["pressureCorrection"] = sensors[i].pressureCorrection;
+            sensor["ppmCorrection"] = sensors[i].ppmCorrection;
+            sensor["luxCorrection"] = sensors[i].luxCorrection;
+            sensor["windSpeedCorrection"] = sensors[i].windSpeedCorrection;
+            sensor["windDirectionCorrection"] = sensors[i].windDirectionCorrection;
+            sensor["rainAmountCorrection"] = sensors[i].rainAmountCorrection;
+            sensor["rainRateCorrection"] = sensors[i].rainRateCorrection;
         }
     }
     logger.info("Serializing sensors to JSON");
@@ -614,10 +729,50 @@ bool SensorManager::loadSensors()
                 sensors[sensorCount].lastRainReset = 0;
             }
 
-            if (sensorObj.containsKey("altitude")) {
+            if (sensorObj.containsKey("altitude"))
+            {
                 sensors[sensorCount].altitude = sensorObj["altitude"].as<int>();
-            } else {
+            }
+            else
+            {
                 sensors[sensorCount].altitude = 0;
+            }
+
+            if (sensorObj.containsKey("temperatureCorrection"))
+            {
+                sensors[sensorCount].temperatureCorrection = sensorObj["temperatureCorrection"].as<float>();
+            }
+            if (sensorObj.containsKey("humidityCorrection"))
+            {
+                sensors[sensorCount].humidityCorrection = sensorObj["humidityCorrection"].as<float>();
+            }
+            if (sensorObj.containsKey("pressureCorrection"))
+            {
+                sensors[sensorCount].pressureCorrection = sensorObj["pressureCorrection"].as<float>();
+            }
+            if (sensorObj.containsKey("ppmCorrection"))
+            {
+                sensors[sensorCount].ppmCorrection = sensorObj["ppmCorrection"].as<float>();
+            }
+            if (sensorObj.containsKey("luxCorrection"))
+            {
+                sensors[sensorCount].luxCorrection = sensorObj["luxCorrection"].as<float>();
+            }
+            if (sensorObj.containsKey("windSpeedCorrection"))
+            {
+                sensors[sensorCount].windSpeedCorrection = sensorObj["windSpeedCorrection"].as<float>();
+            }
+            if (sensorObj.containsKey("windDirectionCorrection"))
+            {
+                sensors[sensorCount].windDirectionCorrection = sensorObj["windDirectionCorrection"].as<int>();
+            }
+            if (sensorObj.containsKey("rainAmountCorrection"))
+            {
+                sensors[sensorCount].rainAmountCorrection = sensorObj["rainAmountCorrection"].as<float>();
+            }
+            if (sensorObj.containsKey("rainRateCorrection"))
+            {
+                sensors[sensorCount].rainRateCorrection = sensorObj["rainRateCorrection"].as<float>();
             }
             sensorCount++;
         }
