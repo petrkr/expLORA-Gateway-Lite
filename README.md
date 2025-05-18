@@ -205,15 +205,12 @@ The logging system is a valuable troubleshooting tool:
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
-## License
+## Development Tips
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+1. Use a quality antenna for the LoRa module for maximum range
+2. When developing custom sensors, stick to the existing [expLORA protocol](https://github.com/Pajenicko/expLORA-Sensors/blob/main/explora-protocol.md) or prepare appropriate modifications for the gateway
 
 ## Acknowledgments
 
 - Thanks to all contributors and testers
 - Special thanks to the ESP32, Arduino, and LoRa communities
-
----
-
-*expLORA Gateway Lite © 2025*
