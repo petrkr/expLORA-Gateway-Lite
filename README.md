@@ -150,7 +150,7 @@ The gateway provides a REST API for programmatic access to sensor data:
 Example API response:
 ```json
 {
-  "version": "1.0.3",
+  "version": "1.0.6",
   "time": "2025-05-17 15:30:45",
   "status": "connected",
   "sensors": [

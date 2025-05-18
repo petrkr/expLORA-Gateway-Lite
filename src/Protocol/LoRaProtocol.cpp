@@ -126,6 +126,9 @@ bool LoRaProtocol::processPacketByType(SensorType type, uint8_t *data, uint8_t l
 
     case SensorType::METEO:
         return processMeteoPacket(data, len, sensorIndex, rssi);
+            
+    case SensorType::DIY_TEMP: 
+        return processDIYTempPacket(data, len, sensorIndex, rssi);
 
     default:
         logger.warning("Unknown device type: 0x" + String(static_cast<uint8_t>(type), HEX));
@@ -178,6 +181,43 @@ bool LoRaProtocol::processBME280Packet(uint8_t *data, uint8_t len, int sensorInd
                     String(voltage, 2) + "V");
     }
 
+    return result;
+}
+
+// Process packet from DIY temperature sensor
+bool LoRaProtocol::processDIYTempPacket(uint8_t *data, uint8_t len, int sensorIndex, int rssi) {
+    // Kontrola minimální délky pro DS18B20 paket (hlavička + data + checksum)
+    const SensorTypeInfo& typeInfo = getSensorTypeInfo(SensorType::DIY_TEMP);
+    if (len < typeInfo.packetDataOffset + typeInfo.expectedDataLength + 1) {
+        logger.warning("Packet too short for DS18B20");
+        return false;
+    }
+    
+    // Extrakce společných údajů
+    uint32_t serialNumber = ((uint32_t)data[2] << 16) | ((uint32_t)data[3] << 8) | data[4];
+    uint16_t batteryRaw = ((uint16_t)data[5] << 8) | data[6];
+    float voltage = batteryRaw / 1000.0;
+    
+    // Extrakce dat specifických pro DS18B20
+    int16_t tempRaw = (int16_t)(((uint16_t)data[8] << 8) | data[9]);
+    float temp = tempRaw / 100.0;
+    
+    // Aktualizace dat senzoru
+    SensorData* sensor = sensorManager.getSensor(sensorIndex);
+    if (!sensor) {
+        logger.error("Error accessing sensor data at index " + String(sensorIndex));
+        return false;
+    }
+    
+    // Aktualizace dat
+    bool result = sensorManager.updateSensorData(sensorIndex, temp, 0.0f, 0.0f, 
+                                            0.0f, 0.0f, voltage, rssi);
+    
+    if (result) {
+        logger.info(sensor->name + " data updated - Temp: " + String(temp, 2) + "°C, Batt: " + 
+                  String(voltage, 2) + "V");
+    }
+    
     return result;
 }
 

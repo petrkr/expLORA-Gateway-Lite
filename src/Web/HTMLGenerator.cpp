@@ -765,7 +765,7 @@ String HTMLGenerator::generateSensorAddPage()
     html += "    console.log('Selected device type:', type);";
 
     // Define which devices have which capabilities
-    html += "    var tempDevices = [1, 2, 3];";     // BME280, SCD40, METEO
+    html += "    var tempDevices = [1, 2, 3, 81];"; // BME280, SCD40, METEO, DIY_TEMP
     html += "    var humDevices = [1, 2, 3];";      // BME280, SCD40, METEO
     html += "    var pressureDevices = [1, 3];";    // BME280, METEO
     html += "    var co2Devices = [2];";            // SCD40
@@ -795,7 +795,7 @@ String HTMLGenerator::generateSensorAddPage()
     html += "    console.log('Selected device type:', type);"; // Debugging
 
     // Device type definitions for individual placeholders
-    html += "    var tempDevices = [1, 2, 3];";     // BME280, SCD40, METEO
+    html += "    var tempDevices = [1, 2, 3, 81];"; // BME280, SCD40, METEO, DIY_TEMP
     html += "    var humDevices = [1, 2, 3];";      // BME280, SCD40, METEO
     html += "    var pressureDevices = [1, 3];";    // BME280, METEO
     html += "    var co2Devices = [2];";            // SCD40
@@ -1070,7 +1070,7 @@ String HTMLGenerator::generateSensorEditPage(const SensorData &sensor, int index
     html += "    console.log('Selected device type:', type);";
 
     // Define which devices have which capabilities
-    html += "    var tempDevices = [1, 2, 3];";     // BME280, SCD40, METEO
+    html += "    var tempDevices = [1, 2, 3, 81];"; // BME280, SCD40, METEO, DIY_TEMP
     html += "    var humDevices = [1, 2, 3];";      // BME280, SCD40, METEO
     html += "    var pressureDevices = [1, 3];";    // BME280, METEO
     html += "    var co2Devices = [2];";            // SCD40
@@ -1101,7 +1101,7 @@ String HTMLGenerator::generateSensorEditPage(const SensorData &sensor, int index
     html += "    console.log('Selected device type:', type);"; // Debugging
 
     // Device type definitions for individual placeholders
-    html += "    var tempDevices = [1, 2, 3];";     // BME280, SCD40, METEO
+    html += "    var tempDevices = [1, 2, 3, 81];"; // BME280, SCD40, METEO, DIY_TEMP
     html += "    var humDevices = [1, 2, 3];";      // BME280, SCD40, METEO
     html += "    var pressureDevices = [1, 3];";    // BME280, METEO
     html += "    var co2Devices = [2];";            // SCD40
