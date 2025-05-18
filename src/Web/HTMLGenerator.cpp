@@ -765,18 +765,19 @@ String HTMLGenerator::generateSensorAddPage()
     html += "    console.log('Selected device type:', type);";
 
     // Define which devices have which capabilities
-    html += "    var tempHumDevices = [1, 2, 3];"; // BME280, SCD40, METEO
-    html += "    var pressureDevices = [1, 3];";   // BME280, METEO
-    html += "    var co2Devices = [2];";           // SCD40
-    html += "    var luxDevices = [4];";           // VEML7700
-    html += "    var weatherDevices = [3];";       // METEO
+    html += "    var tempDevices = [1, 2, 3];";     // BME280, SCD40, METEO
+    html += "    var humDevices = [1, 2, 3];";      // BME280, SCD40, METEO
+    html += "    var pressureDevices = [1, 3];";    // BME280, METEO
+    html += "    var co2Devices = [2];";            // SCD40
+    html += "    var luxDevices = [4];";            // VEML7700
+    html += "    var weatherDevices = [3];";        // METEO
 
     // Update regular fields
     html += "    document.getElementById('altitudeCorrDiv').style.display = pressureDevices.includes(type) ? 'block' : 'none';";
 
     // Update correction fields
-    html += "    document.getElementById('tempCorrDiv').style.display = tempHumDevices.includes(type) ? 'block' : 'none';";
-    html += "    document.getElementById('humCorrDiv').style.display = tempHumDevices.includes(type) ? 'block' : 'none';";
+    html += "    document.getElementById('tempCorrDiv').style.display = tempDevices.includes(type) ? 'block' : 'none';";
+    html += "    document.getElementById('humCorrDiv').style.display = humDevices.includes(type) ? 'block' : 'none';";
     html += "    document.getElementById('pressCorrDiv').style.display = pressureDevices.includes(type) ? 'block' : 'none';";
     html += "    document.getElementById('ppmCorrDiv').style.display = co2Devices.includes(type) ? 'block' : 'none';";
     html += "    document.getElementById('luxCorrDiv').style.display = luxDevices.includes(type) ? 'block' : 'none';";
@@ -794,15 +795,16 @@ String HTMLGenerator::generateSensorAddPage()
     html += "    console.log('Selected device type:', type);"; // Debugging
 
     // Device type definitions for individual placeholders
-    html += "    var tempHumDevices = [1, 2, 3];";
-    html += "    var pressureDevices = [1, 3];";
-    html += "    var co2Devices = [2];";
-    html += "    var luxDevices = [4];";
-    html += "    var weatherDevices = [3];";
+    html += "    var tempDevices = [1, 2, 3];";     // BME280, SCD40, METEO
+    html += "    var humDevices = [1, 2, 3];";      // BME280, SCD40, METEO
+    html += "    var pressureDevices = [1, 3];";    // BME280, METEO
+    html += "    var co2Devices = [2];";            // SCD40
+    html += "    var luxDevices = [4];";            // VEML7700
+    html += "    var weatherDevices = [3];";        // METEO
 
     // Update display
-    html += "    document.getElementById('tempPlaceholder').style.display = tempHumDevices.includes(type) ? 'block' : 'none';";
-    html += "    document.getElementById('humPlaceholder').style.display = tempHumDevices.includes(type) ? 'block' : 'none';";
+    html += "    document.getElementById('tempPlaceholder').style.display = tempDevices.includes(type) ? 'block' : 'none';";
+    html += "    document.getElementById('humPlaceholder').style.display = humDevices.includes(type) ? 'block' : 'none';";
     html += "    document.getElementById('pressPlaceholder').style.display = pressureDevices.includes(type) ? 'block' : 'none';";
     html += "    document.getElementById('ppmPlaceholder').style.display = co2Devices.includes(type) ? 'block' : 'none';";
     html += "    document.getElementById('luxPlaceholder').style.display = luxDevices.includes(type) ? 'block' : 'none';";
@@ -1068,18 +1070,19 @@ String HTMLGenerator::generateSensorEditPage(const SensorData &sensor, int index
     html += "    console.log('Selected device type:', type);";
 
     // Define which devices have which capabilities
-    html += "    var tempHumDevices = [1, 2, 3];"; // BME280, SCD40, METEO
-    html += "    var pressureDevices = [1, 3];";   // BME280, METEO
-    html += "    var co2Devices = [2];";           // SCD40
-    html += "    var luxDevices = [4];";           // VEML7700
-    html += "    var weatherDevices = [3];";       // METEO
+    html += "    var tempDevices = [1, 2, 3];";     // BME280, SCD40, METEO
+    html += "    var humDevices = [1, 2, 3];";      // BME280, SCD40, METEO
+    html += "    var pressureDevices = [1, 3];";    // BME280, METEO
+    html += "    var co2Devices = [2];";            // SCD40
+    html += "    var luxDevices = [4];";            // VEML7700
+    html += "    var weatherDevices = [3];";        // METEO
 
     // Update regular fields
     html += "    document.getElementById('altitudeCorrDiv').style.display = pressureDevices.includes(type) ? 'block' : 'none';";
 
     // Update correction fields
-    html += "    document.getElementById('tempCorrDiv').style.display = tempHumDevices.includes(type) ? 'block' : 'none';";
-    html += "    document.getElementById('humCorrDiv').style.display = tempHumDevices.includes(type) ? 'block' : 'none';";
+    html += "    document.getElementById('tempCorrDiv').style.display = tempDevices.includes(type) ? 'block' : 'none';";
+    html += "    document.getElementById('humCorrDiv').style.display = humDevices.includes(type) ? 'block' : 'none';";
     html += "    document.getElementById('pressCorrDiv').style.display = pressureDevices.includes(type) ? 'block' : 'none';";
     html += "    document.getElementById('ppmCorrDiv').style.display = co2Devices.includes(type) ? 'block' : 'none';";
     html += "    document.getElementById('luxCorrDiv').style.display = luxDevices.includes(type) ? 'block' : 'none';";
@@ -1098,15 +1101,16 @@ String HTMLGenerator::generateSensorEditPage(const SensorData &sensor, int index
     html += "    console.log('Selected device type:', type);"; // Debugging
 
     // Device type definitions for individual placeholders
-    html += "    var tempHumDevices = [1, 2, 3];";
-    html += "    var pressureDevices = [1, 3];";
-    html += "    var co2Devices = [2];";
-    html += "    var luxDevices = [4];";
-    html += "    var weatherDevices = [3];";
+    html += "    var tempDevices = [1, 2, 3];";     // BME280, SCD40, METEO
+    html += "    var humDevices = [1, 2, 3];";      // BME280, SCD40, METEO
+    html += "    var pressureDevices = [1, 3];";    // BME280, METEO
+    html += "    var co2Devices = [2];";            // SCD40
+    html += "    var luxDevices = [4];";            // VEML7700
+    html += "    var weatherDevices = [3];";        // METEO
 
     // Update display
-    html += "    document.getElementById('tempPlaceholder').style.display = tempHumDevices.includes(type) ? 'block' : 'none';";
-    html += "    document.getElementById('humPlaceholder').style.display = tempHumDevices.includes(type) ? 'block' : 'none';";
+    html += "    document.getElementById('tempPlaceholder').style.display = tempDevices.includes(type) ? 'block' : 'none';";
+    html += "    document.getElementById('humPlaceholder').style.display = humDevices.includes(type) ? 'block' : 'none';";
     html += "    document.getElementById('pressPlaceholder').style.display = pressureDevices.includes(type) ? 'block' : 'none';";
     html += "    document.getElementById('ppmPlaceholder').style.display = co2Devices.includes(type) ? 'block' : 'none';";
     html += "    document.getElementById('luxPlaceholder').style.display = luxDevices.includes(type) ? 'block' : 'none';";

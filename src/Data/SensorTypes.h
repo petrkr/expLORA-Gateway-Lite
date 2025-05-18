@@ -36,10 +36,10 @@
 enum class SensorType : uint8_t
 {
     UNKNOWN = SENSOR_TYPE_UNKNOWN,
-    BME280 = SENSOR_TYPE_BME280,     // Temperature, humidity, pressure
-    SCD40 = SENSOR_TYPE_SCD40,       // Temperature, humidity, CO2
-    VEML7700 = SENSOR_TYPE_VEML7700, // Light sensor (LUX)
-    METEO = SENSOR_TYPE_METEO,       // Meteorological station
+    BME280 = SENSOR_TYPE_BME280,       // Temperature, humidity, pressure
+    SCD40 = SENSOR_TYPE_SCD40,         // Temperature, humidity, CO2
+    VEML7700 = SENSOR_TYPE_VEML7700,   // Light sensor (LUX)
+    METEO = SENSOR_TYPE_METEO,         // Meteorological station
     // Add more sensor types here...
 };
 
@@ -70,6 +70,7 @@ const SensorTypeInfo SENSOR_TYPE_DEFINITIONS[] = {
     {SensorType::SCD40,    "CARBON",  6, 7, true,  true,  false,  true, false, false, false, false, false},
     {SensorType::METEO,     "METEO", 14, 7, true,  true,  true,  false, false,  true,  true,  true,  true},
     //{SensorType::VEML7700,  "VEML7700",     4,     7,    false, false, false, false, true,  false, false, false, false},
+
     // Add more sensor types here in the future...
 };
 

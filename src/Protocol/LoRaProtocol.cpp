@@ -495,7 +495,7 @@ bool LoRaProtocol::isValidPacket(uint8_t *buf, uint8_t len)
     }
 
     // Check if deviceType makes sense (between 1-10)
-    if (deviceType == 0 || deviceType > 10)
+    if (deviceType == 0 || deviceType > 256)
     {
         logger.warning("Invalid device type: " + String(deviceType));
         return false;

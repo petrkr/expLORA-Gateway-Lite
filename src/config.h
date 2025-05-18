@@ -112,11 +112,11 @@
 #define DNS_PORT 53  // DNS server port
 
 // Sensor type definitions - easily extendable for additional types
-#define SENSOR_TYPE_UNKNOWN 0x00
-#define SENSOR_TYPE_BME280 0x01   // Temperature, humidity, pressure
-#define SENSOR_TYPE_SCD40 0x02    // Temperature, humidity, CO2
-#define SENSOR_TYPE_METEO 0x03    // Meteorological station
-#define SENSOR_TYPE_VEML7700 0x04 // Light sensor (LUX)
+#define SENSOR_TYPE_UNKNOWN  0x00
+#define SENSOR_TYPE_BME280   0x01  // Temperature, humidity, pressure
+#define SENSOR_TYPE_SCD40    0x02  // Temperature, humidity, CO2
+#define SENSOR_TYPE_METEO    0x03  // Meteorological station
+#define SENSOR_TYPE_VEML7700 0x04  // Light sensor (LUX)
 // Add additional sensor types here...
 
 // PSRAM configuration for web server
