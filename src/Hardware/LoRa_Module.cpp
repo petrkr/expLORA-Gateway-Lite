@@ -56,9 +56,11 @@ bool LoRaModule::setupPins()
     pinMode(csPin, OUTPUT);
     digitalWrite(csPin, HIGH);
 
-    // Set RST pin
-    pinMode(rstPin, OUTPUT);
-    digitalWrite(rstPin, HIGH);
+    // Set RST pin if it is set
+    if (rstPin >= 0) {
+        pinMode(rstPin, OUTPUT);
+        digitalWrite(rstPin, HIGH);
+    }
 
     // Set DIO0 pin
     pinMode(dio0Pin, INPUT);
@@ -85,6 +87,11 @@ bool LoRaModule::setupPins()
 // Reset module
 void LoRaModule::resetModule()
 {
+    if (rstPin < 0) {
+        logger.debug("Reset pin is not available, skipping...");
+        return;
+    }
+
     logger.debug("Resetting LoRa module...");
 
     digitalWrite(rstPin, LOW);
