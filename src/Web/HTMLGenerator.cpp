@@ -455,7 +455,7 @@ String HTMLGenerator::generateConfigPage(const String &ssid, const String &passw
     return html;
 }
 // Generate MQTT Configuration Page
-String HTMLGenerator::generateMqttPage(const String &host, int port, const String &user, const String &password, bool enabled)
+String HTMLGenerator::generateMqttPage(const String &host, int port, const String &user, const String &password, bool enabled, bool tls)
 {
     String html;
 
@@ -472,6 +472,12 @@ String HTMLGenerator::generateMqttPage(const String &host, int port, const Strin
     html += "<div class='form-group'>";
     html += "<label for='enabled'>Enable MQTT:</label>";
     html += "<input type='checkbox' id='enabled' name='enabled' value='1'" + String(enabled ? " checked" : "") + ">";
+    html += "</div>";
+
+    // TLS MQTTS checkbox
+    html += "<div class='form-group'>";
+    html += "<label for='tls'>Enable TLS:</label>";
+    html += "<input type='checkbox' id='tls' name='tls' value='0'" + String(tls ? " checked" : "") + ">";
     html += "</div>";
 
     // MQTT Broker Host

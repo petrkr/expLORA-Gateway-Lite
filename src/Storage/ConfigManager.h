@@ -69,6 +69,7 @@ public:
     String mqttUser;     // MQTT username
     String mqttPassword; // MQTT password
     bool mqttEnabled;    // MQTT enabled flag
+    bool mqttTls;        // MQTTS flag
 
     // Constructor
     ConfigManager(Logger &log, const char *file = CONFIG_FILE);
@@ -105,7 +106,7 @@ public:
 
     // Set MQTT configuration
     bool setMqttConfig(const String &host, int port, const String &user,
-                       const String &password, bool enabled, bool saveConfig = true);
+                       const String &password, bool enabled, bool tls, bool saveConfig = true);
 
     // Set logging level
     void setLogLevel(LogLevel level, bool saveConfig = true);

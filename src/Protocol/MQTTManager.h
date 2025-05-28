@@ -24,6 +24,7 @@
 #include <Arduino.h>
 #include <PubSubClient.h>
 #include <WiFiClient.h>
+#include <WiFiClientSecure.h>
 #include <vector>
 #include "Data/SensorManager.h"
 #include "Data/Logging.h"
@@ -38,11 +39,12 @@
 class MQTTManager
 {
 private:
-    WiFiClient wifiClient;        // WiFi client for MQTT
-    PubSubClient mqttClient;      // MQTT client
-    SensorManager &sensorManager; // Reference to sensor manager
-    ConfigManager &configManager; // Reference to configuration
-    Logger &logger;               // Reference to logger
+    WiFiClient wifiClient;              // WiFi client for MQTT
+    WiFiClientSecure wifiClientSecure;  // WiFi client for MQTTS
+    PubSubClient mqttClient;            // MQTT client
+    SensorManager &sensorManager;       // Reference to sensor manager
+    ConfigManager &configManager;       // Reference to configuration
+    Logger &logger;                     // Reference to logger
 
     String clientId;                    // MQTT Client ID
     unsigned long lastReconnectAttempt; // Time of last connection attempt

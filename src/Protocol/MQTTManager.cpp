@@ -25,7 +25,7 @@
 
 // Constructor
 MQTTManager::MQTTManager(SensorManager &sensors, ConfigManager &config, Logger &log)
-    : mqttClient(wifiClient), sensorManager(sensors), configManager(config), logger(log),
+    : mqttClient(), sensorManager(sensors), configManager(config), logger(log),
       lastReconnectAttempt(0), lastDiscoveryUpdate(0)
 {
 
@@ -49,6 +49,15 @@ bool MQTTManager::init()
     {
         logger.info("MQTT integration disabled in configuration");
         return false;
+    }
+
+    if (configManager.mqttTls) {
+        //TODO: Do checkbox and allow set CA/Certs for validation
+        wifiClientSecure.setInsecure();
+        mqttClient.setClient(wifiClientSecure);
+    }
+    else {
+        mqttClient.setClient(wifiClient);
     }
 
     mqttClient.setBufferSize(1024); // Increase to accommodate larger messages
