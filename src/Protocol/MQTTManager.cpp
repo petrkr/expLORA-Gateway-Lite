@@ -87,10 +87,13 @@ bool MQTTManager::connect()
     {
         logger.info("Connected to MQTT broker");
 
-        mqttClient.publish("explora/status", "online", true);
-
         // Publish discovery information after successful connection
         publishDiscovery();
+
+        // TODO: Some better idea than magic number delay?
+        // Give HA time to subscribe this topic
+        delay(500);
+        mqttClient.publish("explora/status", "online", true);
     }
     else
     {
