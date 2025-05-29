@@ -100,6 +100,7 @@
 #define MQTT_DEFAULT_USER ""
 #define MQTT_DEFAULT_PASS ""
 #define MQTT_DEFAULT_ENABLED false
+#define MQTT_DEFAULT_TLS false
 #define MQTT_RECONNECT_INTERVAL 30000 // 30 seconds in milliseconds
 #define HA_DISCOVERY_PREFIX "homeassistant"
 

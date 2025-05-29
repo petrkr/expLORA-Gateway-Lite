@@ -768,7 +768,8 @@ void WebPortal::handleMqtt(AsyncWebServerRequest *request)
         configManager.mqttPort,
         configManager.mqttUser,
         configManager.mqttPassword,
-        configManager.mqttEnabled);
+        configManager.mqttEnabled,
+        configManager.mqttTls);
 
     // Send response
     request->send(200, "text/html", html);
@@ -792,11 +793,12 @@ void WebPortal::handleMqttPost(AsyncWebServerRequest *request)
         String user = request->getParam("user", true)->value();
         String password = request->getParam("password", true)->value();
         bool enabled = request->hasParam("enabled", true);
+        bool tls = request->hasParam("tls", true);
 
         // Update configuration
-        configManager.setMqttConfig(host, port, user, password, enabled);
+        configManager.setMqttConfig(host, port, user, password, enabled, tls);
 
-        logger.info("MQTT configuration updated: " + host + ":" + String(port) + ", enabled: " + String(enabled));
+        logger.info("MQTT configuration updated: " + host + ":" + String(port) + ", enabled: " + String(enabled) + ", TLS: " + String(tls));
 
         // If MQTT is enabled, reinitialize the MQTT manager
         if (mqttManager)

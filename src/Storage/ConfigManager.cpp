@@ -158,6 +158,7 @@ bool ConfigManager::loadFromFS()
     mqttUser = doc["mqttUser"] | MQTT_DEFAULT_USER;
     mqttPassword = doc["mqttPassword"] | MQTT_DEFAULT_PASS;
     mqttEnabled = doc["mqttEnabled"] | MQTT_DEFAULT_ENABLED;
+    mqttTls = doc["mqttTls"] | MQTT_DEFAULT_TLS;
 
     logger.debug("Loaded config - SSID: " + wifiSSID +
                  ", Password length: " + String(wifiPassword.length()) +
@@ -196,6 +197,7 @@ bool ConfigManager::saveToFS()
     doc["mqttUser"] = mqttUser;
     doc["mqttPassword"] = mqttPassword;
     doc["mqttEnabled"] = mqttEnabled;
+    doc["mqttTls"] = mqttTls;
 
     // Serialize to file
     if (serializeJson(doc, file) == 0)
@@ -250,6 +252,7 @@ bool ConfigManager::loadFromPreferences()
         mqttPassword = preferences.getString("mqttPassword", MQTT_DEFAULT_PASS);
     }
     mqttEnabled = preferences.getBool("mqttEnabled", MQTT_DEFAULT_ENABLED);
+    mqttTls = preferences.getBool("mqttTls", MQTT_DEFAULT_TLS);
 
     // Other values should be loaded from LittleFS, but if needed,
     // we can load them from Preferences as a backup solution
@@ -282,6 +285,7 @@ bool ConfigManager::saveToPreferences()
     preferences.putString("mqttUser", mqttUser);
     preferences.putString("mqttPassword", mqttPassword);
     preferences.putBool("mqttEnabled", mqttEnabled);
+    preferences.putBool("mqttTls", mqttTls);
 
     // Save WiFi configuration (as backup)
     preferences.putString("ssid", wifiSSID);
@@ -293,13 +297,14 @@ bool ConfigManager::saveToPreferences()
 
 // Add a new method to set MQTT configuration
 bool ConfigManager::setMqttConfig(const String &host, int port, const String &user,
-                                  const String &password, bool enabled, bool saveConfig)
+                                  const String &password, bool enabled, bool tls, bool saveConfig)
 {
     mqttHost = host;
     mqttPort = port;
     mqttUser = user;
     mqttPassword = password;
     mqttEnabled = enabled;
+    mqttTls = tls;
 
     return saveConfig ? save() : true;
 }
