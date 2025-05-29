@@ -344,14 +344,14 @@ bool LoRaProtocol::processMeteoPacket(uint8_t *data, uint8_t len, int sensorInde
     uint16_t windDirection = ((uint16_t)data[16] << 8) | data[17];
 
     uint16_t rainAmountRaw = ((uint16_t)data[18] << 8) | data[19];
-    float rainAmount = rainAmountRaw / 1000.0; // thousandths to mm
+    float rainAmount = rainAmountRaw / 5000.0f; // to mm
 
     float rainRate = 0.0f;
     // If we have an extended packet, read rain intensity
     if (len >= 23)
     {
         uint16_t rainRateRaw = ((uint16_t)data[20] << 8) | data[21];
-        rainRate = rainRateRaw / 100.0; // hundredths mm/h to mm/h
+        rainRate = rainRateRaw / 500.0; // to mm/h
     }
 
     // Debug log of all values
