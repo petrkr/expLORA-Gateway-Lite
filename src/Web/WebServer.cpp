@@ -746,7 +746,7 @@ void WebPortal::handleLogLevel(AsyncWebServerRequest *request)
         LogLevel level = logger.levelFromString(levelStr);
 
         // Set new level
-        logger.setLogLevel(level);
+        configManager.setLogLevel(level);
     }
 
     // Redirect back to logs page
