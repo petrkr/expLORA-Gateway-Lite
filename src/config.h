@@ -22,7 +22,7 @@
 #pragma once
 
 // Firmware version
-#define FIRMWARE_VERSION "1.0.6"
+#define FIRMWARE_VERSION "1.0.7"
 
 // LoRa registers
 #define REG_FIFO 0x00

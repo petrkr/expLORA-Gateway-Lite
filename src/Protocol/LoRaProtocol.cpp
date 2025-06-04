@@ -339,7 +339,7 @@ bool LoRaProtocol::processMeteoPacket(uint8_t *data, uint8_t len, int sensorInde
 
     // Extract meteorological data
     uint16_t windSpeedRaw = ((uint16_t)data[14] << 8) | data[15];
-    float windSpeed = windSpeedRaw / 10.0; // tenths m/s to m/s
+    float windSpeed = windSpeedRaw * 0.111111f; // convert to true m/s with correction
 
     uint16_t windDirection = ((uint16_t)data[16] << 8) | data[17];
 
