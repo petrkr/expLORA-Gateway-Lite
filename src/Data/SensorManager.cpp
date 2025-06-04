@@ -357,7 +357,12 @@ bool SensorManager::updateSensorData(int index, float temperature, float humidit
 
         // Add current rain amount to daily total
         sensors[index].dailyRainTotal += rainAmount;
-        saveSensors(false); // Save immediately after updating daily total
+
+        // Log the updated daily total if it has changed
+        if (rainAmount > 0)
+        {
+           saveSensors(false); // Save immediately after updating daily total
+        }
     }
 
     if (sensors[index].hasRainRate())
