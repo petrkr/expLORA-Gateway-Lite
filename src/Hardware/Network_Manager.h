@@ -51,10 +51,10 @@ public:
     bool init();
 
     // Check if any network is available
-    bool isConnected();
+    bool isConnected() const;
 
     // Check if specific network is connected
-    bool isWiFiConnected();
-    bool isEthernetConnected();
-    bool isModemConnected();
+    bool isWiFiConnected() const;
+    bool isEthernetConnected() const;
+    bool isModemConnected() const;
 };
