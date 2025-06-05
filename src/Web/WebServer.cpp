@@ -57,9 +57,6 @@ bool WebPortal::init()
     logger.info("Initializing web portal");
 
     // Create AP name (if needed)
-    uint8_t mac[6];
-    WiFi.macAddress(mac);
-
     String macAddress = WiFi.macAddress();
     macAddress.replace(":", "");                      // Remove colons
     apName = "expLORA-GW-" + macAddress.substring(6); // Use last 6 characters of MAC address
