@@ -57,6 +57,7 @@ public:
     IPAddress getWiFiIP() const;
     IPAddress getWiFiAPIP() const;
     wifi_mode_t getWiFiMode() const;
+    uint8_t* getWiFimacAddress(uint8_t* mac);
 
     // Check if any network is available
     bool isConnected() const;

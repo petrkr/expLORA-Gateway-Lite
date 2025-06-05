@@ -70,6 +70,11 @@ wifi_mode_t NetworkManager::getWiFiMode() const
     return WiFi.getMode();
 }
 
+uint8_t* NetworkManager::getWiFimacAddress(uint8_t* mac)
+{
+    return WiFi.macAddress(mac);
+}
+
 // Check if network is available
 bool NetworkManager::isConnected() const
 {
