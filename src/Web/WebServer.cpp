@@ -224,27 +224,6 @@ void WebPortal::processDNS()
     // called automatically in handleClient()
 }
 
-// Switch between AP and client modes
-void WebPortal::setAPMode(bool enable)
-{
-    if (enable == isAPMode)
-    {
-        return; // No change
-    }
-
-    if (enable)
-    {
-        // Switch to AP mode
-        setupAP();
-    }
-    else
-    {
-        // Switch to client mode
-        dnsServer.stop();
-        isAPMode = false;
-    }
-}
-
 // Get current mode
 bool WebPortal::isInAPMode() const
 {

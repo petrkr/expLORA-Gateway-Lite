@@ -129,9 +129,6 @@ public:
     // Process DNS requests (for captive portal)
     void processDNS();
 
-    // Switch between AP and client modes
-    void setAPMode(bool enable);
-
     // Get current mode
     bool isInAPMode() const;
 
