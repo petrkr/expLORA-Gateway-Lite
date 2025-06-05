@@ -29,6 +29,7 @@
 #include "../Data/Logging.h"
 #include "../Storage/ConfigManager.h"
 #include "../Protocol/MQTTManager.h"
+#include "../Hardware/Network_Manager.h"
 
 /**
  * Class for web portal management
@@ -54,6 +55,8 @@ private:
     DNSServer dnsServer;          // DNS server for captive portal
     SensorManager &sensorManager; // Reference to sensor manager
     Logger &logger;               // Reference to logger
+
+    NetworkManager &networkManager; // Reference to network manager
 
     bool isAPMode; // AP mode (true) or client mode (false)
     String apName; // AP name in AP mode
@@ -111,7 +114,7 @@ private:
 public:
     // Constructor
     WebPortal(SensorManager &sensors, Logger &log, String &ssid, String &password,
-              bool &configMode, ConfigManager &config, String &timezone);
+              bool &configMode, ConfigManager &config, NetworkManager &nm, String &timezone);
     // Destructor
     ~WebPortal();
 
