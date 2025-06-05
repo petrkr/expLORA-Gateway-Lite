@@ -24,6 +24,7 @@
 
 #include <Arduino.h>
 #include <SPI.h>
+#include <WiFi.h>
 #include "../config.h"
 #include "../Data/Logging.h"
 #include "SPI_Manager.h"
@@ -49,6 +50,13 @@ public:
 
     // Initialize network module
     bool init();
+
+    // WiFi methods
+    String getWiFiSSID() const;
+    String getWiFiAPSSID() const;
+    IPAddress getWiFiIP() const;
+    IPAddress getWiFiAPIP() const;
+    wifi_mode_t getWiFiMode() const;
 
     // Check if any network is available
     bool isConnected() const;
