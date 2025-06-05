@@ -40,6 +40,7 @@
 #include "Hardware/LoRa_Module.h"
 #include "Hardware/PSRAM_Manager.h"
 #include "Hardware/SPI_Manager.h"
+#include "Hardware/Network_Manager.h"
 
 // Storage
 #include "Storage/ConfigManager.h"
@@ -54,14 +55,15 @@
 #include "Web/HTMLGenerator.h"
 
 // Global object instances
-Logger logger;                // Logging system
-ConfigManager *configManager; // Configuration manager
-SPIManager *spiManager;       // SPI communication manager
-LoRaModule *loraModule;       // LoRa module
-SensorManager *sensorManager; // Sensor manager
-LoRaProtocol *loraProtocol;   // LoRa protocol
-MQTTManager *mqttManager;     // MQTT Manager
-WebPortal *webPortal;         // Web interface
+Logger logger;                  // Logging system
+ConfigManager *configManager;   // Configuration manager
+SPIManager *spiManager;         // SPI communication manager
+LoRaModule *loraModule;         // LoRa module
+SensorManager *sensorManager;   // Sensor manager
+LoRaProtocol *loraProtocol;     // LoRa protocol
+MQTTManager *mqttManager;       // MQTT Manager
+WebPortal *webPortal;           // Web interface
+NetworkManager *networkManager; // Network manager
 
 // Timer for disabling AP mode
 unsigned long apStartTime = 0;
@@ -171,8 +173,11 @@ void setup()
         return;
     }
 
+    // Network manager initialization
+    networkManager = new NetworkManager(logger);
+
     // Sensor manager initialization
-    sensorManager = new SensorManager(logger);
+    sensorManager = new SensorManager(logger, *networkManager);
     if (!sensorManager->init())
     {
         logger.error("Failed to initialize sensor manager");
@@ -209,7 +214,7 @@ void setup()
         configManager->enableConfigMode(true);
         webPortal = new WebPortal(*sensorManager, logger,
                                   configManager->wifiSSID, configManager->wifiPassword,
-                                  configManager->configMode, *configManager, configManager->timezone);
+                                  configManager->configMode, *configManager, *networkManager, configManager->timezone);
     }
     else
     {
@@ -262,7 +267,7 @@ void setup()
         // Web interface initialization - will be accessible via AP and client (if connected)
         webPortal = new WebPortal(*sensorManager, logger,
                                   configManager->wifiSSID, configManager->wifiPassword,
-                                  configManager->configMode, *configManager, configManager->timezone);
+                                  configManager->configMode, *configManager, *networkManager, configManager->timezone);
     }
 
     // LoRa module initialization
@@ -282,8 +287,8 @@ void setup()
     // Web portal initialization if not already initialized
     if (!webPortal)
     {
-        webPortal = new WebPortal(*sensorManager, logger, configManager->wifiSSID, configManager->wifiPassword, configManager->configMode, *configManager,
-                                  configManager->timezone);
+        webPortal = new WebPortal(*sensorManager, logger, configManager->wifiSSID, configManager->wifiPassword, configManager->configMode,
+            *configManager, *networkManager, configManager->timezone);
     }
 
     // Initialize MQTT Manager if WiFi is connected
@@ -359,7 +364,7 @@ void loop()
     }
 
     // Process MQTT communication
-    if (mqttManager && WiFi.status() == WL_CONNECTED)
+    if (mqttManager && networkManager->isConnected())
     {
         mqttManager->process();
     }
@@ -371,7 +376,7 @@ void loop()
         if (loraProtocol->processReceivedPacket())
         {
             // If we have a mqttManager and it's connected, publish the latest sensor data
-            if (mqttManager && WiFi.status() == WL_CONNECTED)
+            if (mqttManager && networkManager->isConnected())
             {
                 mqttManager->publishSensorData(loraProtocol->getLastProcessedSensorIndex());
             }
@@ -379,7 +384,7 @@ void loop()
     }
 
     // Check WiFi connection and reconnect if needed
-    if (!configManager->configMode && WiFi.status() != WL_CONNECTED)
+    if (!configManager->configMode && !networkManager->isWiFiConnected())
     {
         unsigned long now = millis();
         if (now - configManager->lastWifiAttempt > WIFI_RECONNECT_INTERVAL)
@@ -389,14 +394,14 @@ void loop()
             WiFi.begin(configManager->wifiSSID.c_str(), configManager->wifiPassword.c_str());
 
             int attempts = 0;
-            while (WiFi.status() != WL_CONNECTED && attempts < 10)
+            while (!networkManager->isWiFiConnected() && attempts < 10)
             {
                 delay(500);
                 Serial.print(".");
                 attempts++;
             }
 
-            if (WiFi.status() == WL_CONNECTED)
+            if (networkManager->isWiFiConnected())
             {
                 logger.info("WiFi reconnected! IP: " + WiFi.localIP().toString());
 

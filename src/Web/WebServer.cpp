@@ -29,10 +29,10 @@
 
 // Constructor
 WebPortal::WebPortal(SensorManager &sensors, Logger &log, String &ssid, String &password,
-                     bool &config_mode, ConfigManager &config, String &tz)
+                     bool &config_mode, ConfigManager &config, NetworkManager &nm, String &tz)
     : server(HTTP_PORT), sensorManager(sensors), logger(log), isAPMode(false),
       wifiSSID(ssid), wifiPassword(password), configMode(config_mode),
-      timezone(tz), configManager(config), mqttManager(nullptr)
+      timezone(tz), configManager(config), mqttManager(nullptr), networkManager(nm)
 {
 }
 
@@ -65,7 +65,7 @@ bool WebPortal::init()
     apName = "expLORA-GW-" + macAddress.substring(6); // Use last 6 characters of MAC address
 
     // Set mode based on current configuration
-    isAPMode = configMode || (WiFi.status() != WL_CONNECTED);
+    isAPMode = configMode || !networkManager.isWiFiConnected();
 
     if (isAPMode)
     {
