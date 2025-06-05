@@ -125,7 +125,7 @@ void WebPortal::setupAP()
         logger.error("AP setup failed");
     }
 
-    IPAddress apIP = WiFi.softAPIP();
+    IPAddress apIP = networkManager.getWiFiAPIP();
     logger.info("AP IP assigned: " + apIP.toString());
 
     // Configure DNS server with custom TTL for faster responses
@@ -295,7 +295,7 @@ void WebPortal::handleConfig(AsyncWebServerRequest *request)
 {
     logger.debug("HTTP request: GET /config");
 
-    String currentIP = isAPMode ? WiFi.softAPIP().toString() : WiFi.localIP().toString();
+    String currentIP = isAPMode ? networkManager.getWiFiAPIP().toString() : networkManager.getWiFiIP().toString();
 
     // Generate HTML
     String html = HTMLGenerator::generateConfigPage(wifiSSID, wifiPassword, configMode, currentIP, timezone, networkManager);
@@ -968,7 +968,7 @@ void WebPortal::handleNotFound(AsyncWebServerRequest *request)
         // For Apple devices
         if (requestUrl == "/hotspot-detect.html" || requestUrl.indexOf("captive.apple.com") >= 0)
         {
-            request->redirect("http://" + WiFi.softAPIP().toString() + "/config");
+            request->redirect("http://" + networkManager.getWiFiAPIP().toString() + "/config");
             return;
         }
 
@@ -976,7 +976,7 @@ void WebPortal::handleNotFound(AsyncWebServerRequest *request)
         if (requestUrl == "/generate_204" || requestUrl == "/ncsi.txt" ||
             requestUrl.indexOf("detectportal.firefox.com") >= 0)
         {
-            request->redirect("http://" + WiFi.softAPIP().toString() + "/config");
+            request->redirect("http://" + networkManager.getWiFiAPIP().toString() + "/config");
             return;
         }
 
