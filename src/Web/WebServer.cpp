@@ -281,7 +281,7 @@ void WebPortal::handleRoot(AsyncWebServerRequest *request)
     std::vector<SensorData> sensorsList = sensorManager.getActiveSensors();
 
     // Generate HTML
-    String html = HTMLGenerator::generateHomePage(sensorsList);
+    String html = HTMLGenerator::generateHomePage(sensorsList, networkManager);
 
     // Send response
     request->send(200, "text/html", html);
@@ -295,7 +295,7 @@ void WebPortal::handleConfig(AsyncWebServerRequest *request)
     String currentIP = isAPMode ? WiFi.softAPIP().toString() : WiFi.localIP().toString();
 
     // Generate HTML
-    String html = HTMLGenerator::generateConfigPage(wifiSSID, wifiPassword, configMode, currentIP, timezone);
+    String html = HTMLGenerator::generateConfigPage(wifiSSID, wifiPassword, configMode, currentIP, timezone, networkManager);
 
     // Send response
     request->send(200, "text/html", html);
@@ -855,7 +855,7 @@ void WebPortal::handleAPI(AsyncWebServerRequest *request)
     if (format.equalsIgnoreCase("json"))
     {
         // JSON format
-        String jsonOutput = HTMLGenerator::generateAPIJson(sensorsList);
+        String jsonOutput = HTMLGenerator::generateAPIJson(sensorsList, networkManager);
 
         // Send JSON response
         AsyncResponseStream *response = request->beginResponseStream("application/json");
