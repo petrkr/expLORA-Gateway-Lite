@@ -237,14 +237,14 @@ void setup()
         WiFi.begin(configManager->wifiSSID.c_str(), configManager->wifiPassword.c_str());
 
         int attempts = 0;
-        while (WiFi.status() != WL_CONNECTED && attempts < 20)
+        while (!networkManager->isWiFiConnected() && attempts < 20)
         {
             delay(500);
             Serial.print(".");
             attempts++;
         }
 
-        if (WiFi.status() == WL_CONNECTED)
+        if (networkManager->isWiFiConnected())
         {
             logger.info("WiFi connected! IP: " + WiFi.localIP().toString());
             configManager->enableConfigMode(false);
@@ -328,7 +328,7 @@ void loop()
         if (millis() - apStartTime > AP_TIMEOUT)
         {
             // Time expired, switch to client mode if successfully connected
-            if (WiFi.status() == WL_CONNECTED)
+            if (networkManager->isWiFiConnected())
             {
                 logger.info("Temporary AP timeout reached. Switching to client mode only.");
                 WiFi.mode(WIFI_STA);
