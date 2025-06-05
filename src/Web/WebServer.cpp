@@ -21,7 +21,6 @@
 
 #include "WebServer.h"
 #include "HTMLGenerator.h"
-#include <WiFi.h>
 #include <AsyncJson.h>
 #include <ArduinoJson.h>
 #include <LittleFS.h>
@@ -56,17 +55,21 @@ bool WebPortal::init()
 {
     logger.info("Initializing web portal");
 
-    // Create AP name (if needed)
-    String macAddress = WiFi.macAddress();
-    macAddress.replace(":", "");                      // Remove colons
-    apName = "expLORA-GW-" + macAddress.substring(6); // Use last 6 characters of MAC address
-
     // Set mode based on current configuration
     isAPMode = configMode || !networkManager.isWiFiConnected();
 
     if (isAPMode)
     {
-        setupAP();
+        if (networkManager.setupAP()) {
+            // Configure DNS server with custom TTL for faster responses
+            dnsServer.setTTL(30); // TTL in seconds (lower value = more responsive)
+            dnsServer.start(DNS_PORT, "*", networkManager.getWiFiAPIP());
+            logger.info("DNS server started on port " + String(DNS_PORT));
+        }
+        else
+        {
+            logger.error("Failed to set up AP mode");
+        }
     }
 
     // Setup routes
@@ -93,47 +96,6 @@ bool WebPortal::init()
     // logger.info("Web server task created on core 0");
 
     return true;
-}
-
-// AP mode initialization
-void WebPortal::setupAP()
-{
-    logger.info("Starting AP mode: " + apName);
-
-    // Full WiFi reset sequence
-    WiFi.disconnect(true);
-    WiFi.mode(WIFI_OFF);
-    delay(200);
-
-    // AP configuration with optimized parameters
-    WiFi.setTxPower(WIFI_POWER_19_5dBm); // Maximum power
-
-    // Set up AP mode with optimized settings
-    WiFi.mode(WIFI_AP);
-    logger.info("Setting up AP: " + apName);
-
-    // AP configuration with 4 clients max and channel 6 (less crowded usually)
-    bool apStarted = WiFi.softAP(apName.c_str());
-    delay(1000); // Give AP time to fully initialize
-
-    if (apStarted)
-    {
-        logger.info("AP setup successful");
-    }
-    else
-    {
-        logger.error("AP setup failed");
-    }
-
-    IPAddress apIP = networkManager.getWiFiAPIP();
-    logger.info("AP IP assigned: " + apIP.toString());
-
-    // Configure DNS server with custom TTL for faster responses
-    dnsServer.setTTL(30); // TTL in seconds (lower value = more responsive)
-    dnsServer.start(DNS_PORT, "*", apIP);
-    logger.info("DNS server started on port " + String(DNS_PORT));
-
-    isAPMode = true;
 }
 
 // Setup routes for web server

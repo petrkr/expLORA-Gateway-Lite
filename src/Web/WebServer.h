@@ -69,9 +69,6 @@ private:
     bool &configMode;
     String &timezone;
 
-    // AP mode initialization
-    void setupAP();
-
     ConfigManager &configManager; // Reference to configuration
 
     // Setup routes for web server
