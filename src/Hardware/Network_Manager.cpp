@@ -21,7 +21,6 @@
  */
 
 #include <Arduino.h>
-#include <WiFi.h>
 
 #include "Network_Manager.h"
  
@@ -45,6 +44,31 @@ bool NetworkManager::init()
     return true;
 }
 
+// WiFi methods
+String NetworkManager::getWiFiSSID() const
+{
+    return WiFi.SSID();
+}
+
+String NetworkManager::getWiFiAPSSID() const
+{
+    return WiFi.softAPSSID();
+}
+
+IPAddress NetworkManager::getWiFiIP() const
+{
+    return WiFi.localIP();
+}
+
+IPAddress NetworkManager::getWiFiAPIP() const
+{
+    return WiFi.softAPIP();
+}
+
+wifi_mode_t NetworkManager::getWiFiMode() const
+{
+    return WiFi.getMode();
+}
 
 // Check if network is available
 bool NetworkManager::isConnected() const
