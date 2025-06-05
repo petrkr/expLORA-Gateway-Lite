@@ -45,6 +45,58 @@ bool NetworkManager::init()
 }
 
 // WiFi methods
+
+String NetworkManager::_generateAPSSID()
+{
+    String macAddress = getWiFimacAddress();
+    macAddress.replace(":", ""); // Remove colons
+    String apName = "expLORA-GW-" + macAddress.substring(6); // Use last 6 characters of MAC address
+    logger.info("Generated AP SSID: " + apName);
+    return apName;
+}
+
+bool NetworkManager::setupAP(String apName)
+{
+    if (apName.isEmpty())
+    {
+        apName = _generateAPSSID(); // Generate default AP name if not provided
+    }
+
+    logger.info("Starting AP mode: " + apName);
+
+    // Full WiFi reset sequence
+    WiFi.disconnect(true);
+    WiFi.mode(WIFI_OFF);
+    delay(200);
+
+    // AP configuration with optimized parameters
+    WiFi.setTxPower(WIFI_POWER_19_5dBm); // Maximum power
+
+    // Set up AP mode with optimized settings
+    WiFi.mode(WIFI_AP);
+    logger.info("Setting up AP: " + apName);
+
+    // AP configuration with 4 clients max and channel 6 (less crowded usually)
+    bool apStarted = WiFi.softAP(apName.c_str());
+    delay(1000); // Give AP time to fully initialize
+
+    if (apStarted)
+    {
+        logger.info("AP setup successful");
+    }
+    else
+    {
+        logger.error("AP setup failed");
+        return false;
+    }
+
+    IPAddress apIP = getWiFiAPIP();
+    logger.info("AP IP assigned: " + apIP.toString());
+
+    isAPMode = true;
+    return true;
+}
+
 String NetworkManager::getWiFiSSID() const
 {
     return WiFi.SSID();
@@ -73,6 +125,11 @@ wifi_mode_t NetworkManager::getWiFiMode() const
 uint8_t* NetworkManager::getWiFimacAddress(uint8_t* mac)
 {
     return WiFi.macAddress(mac);
+}
+
+String NetworkManager::getWiFimacAddress(void) const
+{
+    return WiFi.macAddress();
 }
 
 // Check if network is available

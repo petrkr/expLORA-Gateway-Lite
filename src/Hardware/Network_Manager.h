@@ -40,6 +40,8 @@ class NetworkManager
 {
 private:
     Logger &logger; // Reference to logger
+    bool isAPMode = false; // Flag for AP mode
+    String _generateAPSSID();
 
 public:
     // Constructor
@@ -52,12 +54,14 @@ public:
     bool init();
 
     // WiFi methods
+    bool setupAP(String apName = "");
     String getWiFiSSID() const;
     String getWiFiAPSSID() const;
     IPAddress getWiFiIP() const;
     IPAddress getWiFiAPIP() const;
     wifi_mode_t getWiFiMode() const;
     uint8_t* getWiFimacAddress(uint8_t* mac);
+    String getWiFimacAddress(void) const;
 
     // Check if any network is available
     bool isConnected() const;
