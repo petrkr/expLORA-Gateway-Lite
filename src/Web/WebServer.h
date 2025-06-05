@@ -24,7 +24,6 @@
 #include <Arduino.h>
 #include <ESPAsyncWebServer.h>
 #include <AsyncTCP.h>
-#include <DNSServer.h>
 #include "../Data/SensorManager.h"
 #include "../Data/Logging.h"
 #include "../Storage/ConfigManager.h"
@@ -53,7 +52,6 @@ private:
     volatile bool isProcessing = false;
 
     AsyncWebServer server;        // Asynchronous web server
-    DNSServer dnsServer;          // DNS server for captive portal
     SensorManager &sensorManager; // Reference to sensor manager
     Logger &logger;               // Reference to logger
     OTAServer *otaServer;         // OTA Server

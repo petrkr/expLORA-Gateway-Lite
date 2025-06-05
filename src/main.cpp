@@ -354,7 +354,7 @@ void loop()
     // If in AP mode, process DNS captive portal:
     if (webPortal && webPortal->isInAPMode())
     {
-        webPortal->processDNS(); // This method internally calls dnsServer.processNextRequest();
+        networkManager->processDNS(); // This method internally calls dnsServer.processNextRequest();
     }
 
     // Handle web interface

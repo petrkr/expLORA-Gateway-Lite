@@ -25,6 +25,7 @@
 #include <Arduino.h>
 #include <SPI.h>
 #include <WiFi.h>
+#include <DNSServer.h>
 #include "../config.h"
 #include "../Data/Logging.h"
 #include "SPI_Manager.h"
@@ -42,6 +43,7 @@ private:
     Logger &logger; // Reference to logger
     bool isAPMode = false; // Flag for AP mode
     String _generateAPSSID();
+    DNSServer dnsServer;          // DNS server for captive portal
 
 public:
     // Constructor
@@ -55,6 +57,8 @@ public:
 
     // WiFi methods
     bool setupAP(String apName = "");
+    void processDNS();
+    void stopDNS();
     String getWiFiSSID() const;
     String getWiFiAPSSID() const;
     IPAddress getWiFiIP() const;

@@ -60,16 +60,7 @@ bool WebPortal::init()
 
     if (isAPMode)
     {
-        if (networkManager.setupAP()) {
-            // Configure DNS server with custom TTL for faster responses
-            dnsServer.setTTL(30); // TTL in seconds (lower value = more responsive)
-            dnsServer.start(DNS_PORT, "*", networkManager.getWiFiAPIP());
-            logger.info("DNS server started on port " + String(DNS_PORT));
-        }
-        else
-        {
-            logger.error("Failed to set up AP mode");
-        }
+        networkManager.setupAP();
     }
 
     // Setup routes
@@ -176,14 +167,8 @@ WebPortal::~WebPortal()
     //}
 
     // Stop DNS server
-    dnsServer.stop();
-}
-
-// Process DNS requests
-void WebPortal::processDNS()
-{
-    dnsServer.processNextRequest();
-    // called automatically in handleClient()
+    // TODO: Really stop DNS from here?
+    networkManager.stopDNS();
 }
 
 // Get current mode
@@ -200,7 +185,7 @@ void WebPortal::restart()
     // Reset DNS server if it was running
     if (isAPMode)
     {
-        dnsServer.stop();
+        networkManager.stopDNS();
     }
 
     // Re-initialize

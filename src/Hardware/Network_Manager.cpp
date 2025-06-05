@@ -93,8 +93,25 @@ bool NetworkManager::setupAP(String apName)
     IPAddress apIP = getWiFiAPIP();
     logger.info("AP IP assigned: " + apIP.toString());
 
+    // Configure DNS server with custom TTL for faster responses
+    dnsServer.setTTL(30); // TTL in seconds (lower value = more responsive)
+    dnsServer.start(DNS_PORT, "*", getWiFiAPIP());
+    logger.info("DNS server started on port " + String(DNS_PORT));
+
     isAPMode = true;
     return true;
+}
+
+// Process DNS requests
+void NetworkManager::processDNS()
+{
+    dnsServer.processNextRequest();
+}
+
+void NetworkManager::stopDNS()
+{
+    dnsServer.stop();
+    logger.info("DNS server stopped");
 }
 
 String NetworkManager::getWiFiSSID() const
