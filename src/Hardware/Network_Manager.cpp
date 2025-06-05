@@ -47,14 +47,14 @@ bool NetworkManager::init()
 
 
 // Check if network is available
-bool NetworkManager::isConnected()
+bool NetworkManager::isConnected() const
 {
     logger.debug("Checking if any network is connected...");
     return isWiFiConnected() || isEthernetConnected() || isModemConnected();
 }
 
 // Check if WiFi is connected
-bool NetworkManager::isWiFiConnected()
+bool NetworkManager::isWiFiConnected() const
 {
     logger.debug("Checking WiFi connection...");
 
@@ -62,7 +62,7 @@ bool NetworkManager::isWiFiConnected()
 }
 
 // Check if Ethernet is connected
-bool NetworkManager::isEthernetConnected()
+bool NetworkManager::isEthernetConnected() const
 {
     logger.debug("Checking Ethernet connection...");
     // Implement Ethernet connection check logic here
@@ -70,7 +70,7 @@ bool NetworkManager::isEthernetConnected()
 }
 
 // Check if Modem is connected
-bool NetworkManager::isModemConnected()
+bool NetworkManager::isModemConnected() const
 {
     logger.debug("Checking Modem connection...");
     // Implement Modem connection check logic here
