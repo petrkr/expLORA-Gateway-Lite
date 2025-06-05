@@ -23,7 +23,6 @@
 #include <esp_heap_caps.h>
 #include <algorithm>
 #include <Arduino.h>
-#include <WiFi.h>
 #include "../config.h"
 
 // Initialization of static variables
@@ -253,15 +252,15 @@ String HTMLGenerator::generateHomePage(const std::vector<SensorData> &sensors, c
 
     if (networkManager.isWiFiConnected())
     {
-        html += "<p><strong>WiFi:</strong> Connected to " + WiFi.SSID() + "</p>";
-        html += "<p><strong>IP:</strong> " + WiFi.localIP().toString() + "</p>";
+        html += "<p><strong>WiFi:</strong> Connected to " + networkManager.getWiFiSSID() + "</p>";
+        html += "<p><strong>IP:</strong> " + networkManager.getWiFiIP().toString() + "</p>";
     }
     else
     {
         html += "<p><strong>WiFi:</strong> Disconnected</p>";
-        if (WiFi.getMode() == WIFI_AP)
+        if (networkManager.getWiFiMode() == WIFI_AP)
         {
-            html += "<p><strong>AP IP:</strong> " + WiFi.softAPIP().toString() + "</p>";
+            html += "<p><strong>AP IP:</strong> " + networkManager.getWiFiAPIP().toString() + "</p>";
         }
     }
 
@@ -395,8 +394,8 @@ String HTMLGenerator::generateConfigPage(const String &ssid, const String &passw
     if (configMode)
     {
         html += "<p><strong>Mode:</strong> Access Point</p>";
-        html += "<p><strong>AP Name:</strong> " + WiFi.softAPSSID() + "</p>";
-        html += "<p><strong>AP IP:</strong> " + WiFi.softAPIP().toString() + "</p>";
+        html += "<p><strong>AP Name:</strong> " + networkManager.getWiFiAPSSID() + "</p>";
+        html += "<p><strong>AP IP:</strong> " + networkManager.getWiFiAPIP().toString() + "</p>";
     }
     else
     {
@@ -405,7 +404,7 @@ String HTMLGenerator::generateConfigPage(const String &ssid, const String &passw
         html += "<p><strong>Status:</strong> " + String(networkManager.isWiFiConnected() ? "Connected" : "Disconnected") + "</p>";
         if (networkManager.isWiFiConnected())
         {
-            html += "<p><strong>IP:</strong> " + WiFi.localIP().toString() + "</p>";
+            html += "<p><strong>IP:</strong> " + networkManager.getWiFiIP().toString() + "</p>";
         }
     }
     html += "</div>";
