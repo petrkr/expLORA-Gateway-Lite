@@ -292,7 +292,7 @@ void setup()
     }
 
     // Initialize MQTT Manager if WiFi is connected
-    mqttManager = new MQTTManager(*sensorManager, *configManager, logger);
+    mqttManager = new MQTTManager(*sensorManager, *configManager, logger, *networkManager);
     if (!mqttManager->init())
     {
         logger.debug("MQTT Manager initialization skipped (disabled in config)");
