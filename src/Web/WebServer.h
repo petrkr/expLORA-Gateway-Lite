@@ -28,6 +28,7 @@
 #include "../Data/Logging.h"
 #include "../Storage/ConfigManager.h"
 #include "../Protocol/MQTTManager.h"
+#include "OTAServer.h"
 #include "../Hardware/Network_Manager.h"
 
 /**
@@ -53,6 +54,7 @@ private:
     AsyncWebServer server;        // Asynchronous web server
     SensorManager &sensorManager; // Reference to sensor manager
     Logger &logger;               // Reference to logger
+    OTAServer *otaServer;         // OTA Server
 
     NetworkManager &networkManager; // Reference to network manager
 
