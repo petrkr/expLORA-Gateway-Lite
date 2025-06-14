@@ -321,12 +321,6 @@ void loop()
     //    }
     //}
 
-    // If in AP mode, process DNS captive portal:
-    if (webPortal && webPortal->isInAPMode())
-    {
-        networkManager->processDNS(); // This method internally calls dnsServer.processNextRequest();
-    }
-
     // Handle web interface
     if (webPortal)
     {
@@ -353,6 +347,13 @@ void loop()
         }
     }
 
+    // Process network stuff
+    if (networkManager)
+    {
+        networkManager->process();
+    }
+
+    // TODO: Move this to network manager process loop
     // Check WiFi connection and reconnect if needed
     if (!configManager->configMode && !networkManager->isWiFiConnected())
     {
