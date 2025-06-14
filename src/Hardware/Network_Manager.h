@@ -79,4 +79,6 @@ public:
     bool isWiFiConnected() const;
     bool isEthernetConnected() const;
     bool isModemConnected() const;
+
+    bool isWifiAPActive() const;
 };

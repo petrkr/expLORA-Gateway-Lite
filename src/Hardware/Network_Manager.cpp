@@ -213,6 +213,11 @@ bool NetworkManager::isWiFiConnected() const
     return WiFi.status() == WL_CONNECTED;
 }
 
+bool NetworkManager::isWifiAPActive() const
+{
+    return _wifiAPmode;
+}
+
 // Check if Ethernet is connected
 bool NetworkManager::isEthernetConnected() const
 {
