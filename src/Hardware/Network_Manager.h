@@ -55,6 +55,7 @@ public:
 
     // Initialize network module
     bool init();
+    void process();
 
     // WiFi methods
     bool setupAP(String apName = "");

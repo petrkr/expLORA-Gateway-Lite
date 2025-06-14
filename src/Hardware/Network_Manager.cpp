@@ -44,6 +44,14 @@ bool NetworkManager::init()
     return true;
 }
 
+
+void NetworkManager::process()
+{
+    if (_wifiAPmode) {
+        processDNS();
+    }
+}
+
 // WiFi methods
 
 String NetworkManager::_generateAPSSID()
