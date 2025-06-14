@@ -21,7 +21,7 @@ void OTAServer::onOTAStart() {
 void OTAServer::onOTAProgress(size_t current, size_t final) {
     if (millis() - ota_progress_millis > 1000) {
         ota_progress_millis = millis();
-        logger.debug("OTA Progress Current: " + String(current) + " bytes, Final: " + String(final) + " bytes\n");
+        logger.debug("OTA Progress Current: " + String(current) + " bytes, Final: " + String(final) + " bytes");
     }
 }
 
