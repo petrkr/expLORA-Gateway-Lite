@@ -65,10 +65,6 @@ MQTTManager *mqttManager;       // MQTT Manager
 WebPortal *webPortal;           // Web interface
 NetworkManager *networkManager; // Network manager
 
-// Timer for disabling AP mode
-unsigned long apStartTime = 0;
-bool temporaryAPMode = false;
-
 // File system initialization
 bool initFileSystem()
 {
@@ -192,16 +188,13 @@ void setup()
     logger.info("Configuring WiFi. ConfigMode: " + String(configManager->configMode ? "true" : "false") +
                 ", SSID length: " + String(configManager->wifiSSID.length()));
 
-    // Setting timer for temporary AP mode
-    apStartTime = millis();
-    temporaryAPMode = true;
-
     if (configManager->configMode || configManager->wifiSSID.length() == 0)
     {
         // We're in configuration mode or don't have credentials - AP mode only
         logger.info("Starting in AP mode only");
 
         networkManager->setupAP();
+        networkManager->setAPTimeout(0); // Disable timeout
 
         configManager->enableConfigMode(true);
         webPortal = new WebPortal(*sensorManager, logger,
@@ -212,7 +205,9 @@ void setup()
     {
         // We have credentials - start AP+STA mode
         logger.info("Starting in AP+STA mode (dual mode)");
+
         if (networkManager->setupAP()) {
+            networkManager->setAPTimeout(AP_TIMEOUT); // In Dual mode, we have timeout for AP mode
             logger.info("Temporary AP started with SSID: " + networkManager->getWiFiAPSSID() +
                         " (will be active for 5 minutes). IP: " + networkManager->getWiFiAPIP().toString());
         }
@@ -291,27 +286,6 @@ void setup()
 void loop()
 {
     esp_task_wdt_reset();
-
-    // Check timer for temporary AP mode
-    if (temporaryAPMode && !configManager->configMode && configManager->wifiSSID.length() > 0)
-    {
-        if (millis() - apStartTime > AP_TIMEOUT)
-        {
-            // Time expired, switch to client mode if successfully connected
-            if (networkManager->isWiFiConnected())
-            {
-                logger.info("Temporary AP timeout reached. Switching to client mode only.");
-                WiFi.mode(WIFI_STA);
-                temporaryAPMode = false;
-            }
-            else
-            {
-                // Not connected as a client, keep AP running
-                logger.info("Temporary AP timeout reached but WiFi client not connected. Keeping AP mode active.");
-                temporaryAPMode = false; // Stop timer, but AP remains active
-            }
-        }
-    }
 
     // Process LoRa packets
     // if (loraModule && loraProtocol) {
