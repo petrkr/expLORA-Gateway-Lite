@@ -152,22 +152,18 @@ String NetworkManager::getWiFimacAddress(void) const
 // Check if network is available
 bool NetworkManager::isConnected() const
 {
-    logger.debug("Checking if any network is connected...");
     return isWiFiConnected() || isEthernetConnected() || isModemConnected();
 }
 
 // Check if WiFi is connected
 bool NetworkManager::isWiFiConnected() const
 {
-    logger.debug("Checking WiFi connection...");
-
     return WiFi.status() == WL_CONNECTED;
 }
 
 // Check if Ethernet is connected
 bool NetworkManager::isEthernetConnected() const
 {
-    logger.debug("Checking Ethernet connection...");
     // Implement Ethernet connection check logic here
     return false;
 }
@@ -175,7 +171,6 @@ bool NetworkManager::isEthernetConnected() const
 // Check if Modem is connected
 bool NetworkManager::isModemConnected() const
 {
-    logger.debug("Checking Modem connection...");
     // Implement Modem connection check logic here
     return false;
 }
