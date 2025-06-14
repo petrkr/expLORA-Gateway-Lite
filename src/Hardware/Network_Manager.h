@@ -41,9 +41,10 @@ class NetworkManager
 {
 private:
     Logger &logger; // Reference to logger
-    bool isAPMode = false; // Flag for AP mode
     String _generateAPSSID();
     DNSServer dnsServer;          // DNS server for captive portal
+    bool _wifiAPmode = false;
+    bool _wifiSTAmode = false;
 
 public:
     // Constructor
@@ -57,6 +58,9 @@ public:
 
     // WiFi methods
     bool setupAP(String apName = "");
+    bool disableAP();
+    bool wifiSTAConnect(String ssid, String psk);
+    bool wifiSTADisconnect();
     void processDNS();
     void stopDNS();
     String getWiFiSSID() const;
