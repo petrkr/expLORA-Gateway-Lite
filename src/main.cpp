@@ -200,16 +200,8 @@ void setup()
     {
         // We're in configuration mode or don't have credentials - AP mode only
         logger.info("Starting in AP mode only");
-        WiFi.mode(WIFI_AP);
 
-        // Get device MAC address and create unique SSID
-        String macAddress = WiFi.macAddress();
-        macAddress.replace(":", "");                                 // Remove colons
-        String uniqueSSID = "expLORA-GW-" + macAddress.substring(6); // Use last 6 characters of MAC address
-
-        // Configure AP with unique SSID
-        WiFi.softAP(uniqueSSID.c_str());
-        logger.info("AP started with SSID: " + uniqueSSID + ", IP: " + WiFi.softAPIP().toString());
+        networkManager->setupAP();
 
         configManager->enableConfigMode(true);
         webPortal = new WebPortal(*sensorManager, logger,
@@ -220,33 +212,12 @@ void setup()
     {
         // We have credentials - start AP+STA mode
         logger.info("Starting in AP+STA mode (dual mode)");
-        WiFi.mode(WIFI_AP_STA);
-
-        // Get device MAC address and create unique SSID
-        String macAddress = WiFi.macAddress();
-        macAddress.replace(":", "");                                 // Remove colons
-        String uniqueSSID = "expLORA-GW-" + macAddress.substring(6); // Use last 6 characters of MAC address
-
-        // Configure AP part with unique SSID
-        WiFi.softAP(uniqueSSID.c_str());
-        logger.info("Temporary AP started with SSID: " + uniqueSSID +
-                    " (will be active for 5 minutes). IP: " + WiFi.softAPIP().toString());
-
-        // Configure STA part (client)
-        logger.info("Attempting to connect to WiFi: " + configManager->wifiSSID);
-        WiFi.begin(configManager->wifiSSID.c_str(), configManager->wifiPassword.c_str());
-
-        int attempts = 0;
-        while (!networkManager->isWiFiConnected() && attempts < 20)
-        {
-            delay(500);
-            Serial.print(".");
-            attempts++;
+        if (networkManager->setupAP()) {
+            logger.info("Temporary AP started with SSID: " + networkManager->getWiFiAPSSID() +
+                        " (will be active for 5 minutes). IP: " + networkManager->getWiFiAPIP().toString());
         }
 
-        if (networkManager->isWiFiConnected())
-        {
-            logger.info("WiFi connected! IP: " + WiFi.localIP().toString());
+        if (networkManager->wifiSTAConnect(configManager->wifiSSID, configManager->wifiPassword)) {
             configManager->enableConfigMode(false);
 
             // Initialize NTP
@@ -256,12 +227,11 @@ void setup()
             logger.info("NTP time set");
             logger.setTimeInitialized(true);
         }
-        else
-        {
-            logger.warning("Failed to connect to WiFi after " + String(attempts) + " attempts. SSID: " +
-                           configManager->wifiSSID + ", Continuing in AP mode only");
+        else {
+            logger.warning("Continuing in AP mode only");
+
             // Switch to AP mode only
-            WiFi.mode(WIFI_AP);
+            networkManager->wifiSTADisconnect();
         }
 
         // Web interface initialization - will be accessible via AP and client (if connected)
