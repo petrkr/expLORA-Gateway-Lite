@@ -44,4 +44,5 @@ class OTAServer {
         ~OTAServer();
 
         void init();
+        void process();
 };

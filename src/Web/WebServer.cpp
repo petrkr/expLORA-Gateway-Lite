@@ -203,6 +203,9 @@ void WebPortal::handleClient()
 {
     // No need to do anything here since the task handles it
     // We keep this method for compatibility
+
+    // This will handle auto-reboot after OTA process
+    otaServer->process();
 }
 
 // Ensure proper cleanup in the destructor

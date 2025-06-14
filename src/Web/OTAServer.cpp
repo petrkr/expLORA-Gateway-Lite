@@ -14,6 +14,10 @@ void OTAServer::init() {
     ElegantOTA.onEnd([this](bool success) {this->onOTAEnd(success);});
 }
 
+void OTAServer::process() {
+    ElegantOTA.loop();
+}
+
 void OTAServer::onOTAStart() {
     logger.info("OTA update started!");
 }
