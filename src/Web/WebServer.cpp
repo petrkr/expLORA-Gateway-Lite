@@ -874,7 +874,7 @@ void WebPortal::handleNotFound(AsyncWebServerRequest *request)
     String requestUrl = request->url();
     logger.debug("HTTP 404: " + requestUrl);
 
-    if (isAPMode)
+    if (networkManager.isWifiAPActive())
     {
         // In AP mode - captive portal - redirect all requests to config page
 
