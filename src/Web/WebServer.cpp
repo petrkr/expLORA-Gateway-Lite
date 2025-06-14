@@ -165,10 +165,6 @@ WebPortal::~WebPortal()
     // if (webServerTaskHandle != NULL) {
     //    vTaskDelete(webServerTaskHandle);
     //}
-
-    // Stop DNS server
-    // TODO: Really stop DNS from here?
-    networkManager.stopDNS();
 }
 
 // Get current mode
@@ -185,7 +181,7 @@ void WebPortal::restart()
     // Reset DNS server if it was running
     if (isAPMode)
     {
-        networkManager.stopDNS();
+        networkManager.disableAP(); // If there will be longer APMode, it will be enabled in init again
     }
 
     // Re-initialize
