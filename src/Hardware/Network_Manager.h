@@ -41,10 +41,14 @@ class NetworkManager
 {
 private:
     Logger &logger; // Reference to logger
-    String _generateAPSSID();
     DNSServer dnsServer;          // DNS server for captive portal
     bool _wifiAPmode = false;
     bool _wifiSTAmode = false;
+    unsigned long _apStartup = 0;
+    unsigned long _apTimeout = 0;
+
+    String _generateAPSSID();
+    void _processAPTimeout();
 
 public:
     // Constructor
@@ -60,6 +64,7 @@ public:
     // WiFi methods
     bool setupAP(String apName = "");
     bool disableAP();
+    void setAPTimeout(unsigned long timeout);
     bool wifiSTAConnect(String ssid, String psk);
     bool wifiSTADisconnect();
     void processDNS();

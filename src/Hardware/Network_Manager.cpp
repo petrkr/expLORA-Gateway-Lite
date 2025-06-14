@@ -49,8 +49,10 @@ void NetworkManager::process()
 {
     if (_wifiAPmode) {
         processDNS();
+        _processAPTimeout();
     }
 }
+
 
 // WiFi methods
 
@@ -61,6 +63,28 @@ String NetworkManager::_generateAPSSID()
     String apName = "expLORA-GW-" + macAddress.substring(6); // Use last 6 characters of MAC address
     logger.debug("Generated AP SSID: " + apName);
     return apName;
+}
+
+void NetworkManager::_processAPTimeout() {
+    if (!_wifiAPmode || _apTimeout == 0 || !_wifiSTAmode) {
+        return;
+    }
+
+    if (millis() - _apStartup > _apTimeout)
+    {
+        // Time expired, switch to client mode if successfully connected
+        if (isWiFiConnected())
+        {
+            logger.info("AP timeout reached. Switching to client mode only.");
+            disableAP();
+        }
+        else
+        {
+            // Not connected as a client, keep AP running
+            logger.info("AP timeout reached but WiFi client still not connected. Keeping AP mode active.");
+            _apStartup = millis(); // Reset timer
+        }
+    }
 }
 
 bool NetworkManager::setupAP(String apName)
@@ -92,6 +116,7 @@ bool NetworkManager::setupAP(String apName)
     if (apStarted)
     {
         logger.info("AP setup successful");
+        _apStartup = millis();
     }
     else
     {
@@ -117,6 +142,11 @@ bool NetworkManager::disableAP() {
     _wifiAPmode = false;
 
     return true;
+}
+
+void NetworkManager::setAPTimeout(unsigned long timeout) {
+    logger.debug("Setting AP timeout to " + String(timeout / 1000) + " sec");
+    _apTimeout = timeout;
 }
 
 bool NetworkManager::wifiSTAConnect(String ssid, String psk) {
