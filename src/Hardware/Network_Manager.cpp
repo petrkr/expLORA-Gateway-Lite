@@ -51,12 +51,14 @@ String NetworkManager::_generateAPSSID()
     String macAddress = getWiFimacAddress();
     macAddress.replace(":", ""); // Remove colons
     String apName = "expLORA-GW-" + macAddress.substring(6); // Use last 6 characters of MAC address
-    logger.info("Generated AP SSID: " + apName);
+    logger.debug("Generated AP SSID: " + apName);
     return apName;
 }
 
 bool NetworkManager::setupAP(String apName)
 {
+    _wifiAPmode = true;
+
     if (apName.isEmpty())
     {
         apName = _generateAPSSID(); // Generate default AP name if not provided
@@ -74,7 +76,6 @@ bool NetworkManager::setupAP(String apName)
 
     // Set up AP mode with optimized settings
     WiFi.mode(WIFI_AP);
-    logger.info("Setting up AP: " + apName);
 
     // AP configuration with 4 clients max and channel 6 (less crowded usually)
     bool apStarted = WiFi.softAP(apName.c_str());
@@ -98,7 +99,50 @@ bool NetworkManager::setupAP(String apName)
     dnsServer.start(DNS_PORT, "*", getWiFiAPIP());
     logger.info("DNS server started on port " + String(DNS_PORT));
 
-    isAPMode = true;
+    return true;
+}
+
+bool NetworkManager::disableAP() {
+    stopDNS();
+
+    WiFi.mode(_wifiSTAmode ? WIFI_STA : WIFI_OFF);
+    _wifiAPmode = false;
+
+    return true;
+}
+
+bool NetworkManager::wifiSTAConnect(String ssid, String psk) {
+    _wifiSTAmode = true;
+
+    WiFi.mode(_wifiAPmode ? WIFI_AP_STA : WIFI_STA);
+
+    logger.info("Attempting to connect to WiFi: " + ssid);
+    WiFi.begin(ssid.c_str(), psk.c_str());
+
+    int attempts = 0;
+    while (!isWiFiConnected() && attempts < 20) {
+        delay(500);
+        Serial.print(".");
+        attempts++;
+    }
+    Serial.println();
+
+    if (isWiFiConnected()) {
+        logger.info("WiFi connected! IP: " + WiFi.localIP().toString());
+        return true;
+    }
+    else {
+        logger.warning("Failed to connect to WiFi after " + String(attempts) + " attempts. SSID: " +
+                            ssid);
+        return false;
+    }
+}
+
+bool NetworkManager::wifiSTADisconnect() {
+    WiFi.disconnect(true);
+    WiFi.mode(_wifiAPmode ? WIFI_AP : WIFI_OFF);
+
+    _wifiSTAmode = false;
     return true;
 }
 
