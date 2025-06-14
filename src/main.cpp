@@ -336,17 +336,8 @@ void loop()
         {
             logger.info("Attempting to reconnect to WiFi...");
             configManager->lastWifiAttempt = now;
-            WiFi.begin(configManager->wifiSSID.c_str(), configManager->wifiPassword.c_str());
 
-            int attempts = 0;
-            while (!networkManager->isWiFiConnected() && attempts < 10)
-            {
-                delay(500);
-                Serial.print(".");
-                attempts++;
-            }
-
-            if (networkManager->isWiFiConnected())
+            if (networkManager->wifiSTAConnect(configManager->wifiSSID, configManager->wifiPassword))
             {
                 logger.info("WiFi reconnected! IP: " + WiFi.localIP().toString());
 
