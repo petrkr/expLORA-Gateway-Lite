@@ -895,7 +895,7 @@ void WebPortal::handleNotFound(AsyncWebServerRequest *request)
         }
 
         // For Android and Windows devices
-        if (requestUrl == "/generate_204" || requestUrl == "/ncsi.txt" ||
+        if (requestUrl == "/generate_204" || requestUrl == "/gen_204" || requestUrl == "/ncsi.txt" ||
             requestUrl.indexOf("detectportal.firefox.com") >= 0)
         {
             request->redirect("http://" + networkManager.getWiFiAPIP().toString() + "/config");
