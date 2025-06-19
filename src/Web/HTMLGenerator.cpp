@@ -264,6 +264,9 @@ String HTMLGenerator::generateHomePage(const std::vector<SensorData> &sensors, c
         }
     }
 
+    html += "<p><strong>WiFi MAC:</strong> " + networkManager.getWiFimacAddress() + "</p>";
+
+
     // Current time
     struct tm timeinfo;
     if (getLocalTime(&timeinfo))
