@@ -405,6 +405,7 @@ String HTMLGenerator::generateConfigPage(const String &ssid, const String &passw
         html += "<p><strong>Mode:</strong> Client</p>";
         html += "<p><strong>SSID:</strong> " + ssid + "</p>";
         html += "<p><strong>Status:</strong> " + String(networkManager.isWiFiConnected() ? "Connected" : "Disconnected") + "</p>";
+        html += "<p><strong>MAC:</strong> " + networkManager.getWiFimacAddress() + "</p>";
         if (networkManager.isWiFiConnected())
         {
             html += "<p><strong>IP:</strong> " + networkManager.getWiFiIP().toString() + "</p>";
