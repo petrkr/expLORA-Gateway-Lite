@@ -240,7 +240,7 @@ bool NetworkManager::isConnected() const
 // Check if WiFi is connected
 bool NetworkManager::isWiFiConnected() const
 {
-    return WiFi.status() == WL_CONNECTED;
+    return _wifiSTAmode ? WiFi.status() == WL_CONNECTED : false;
 }
 
 bool NetworkManager::isWifiAPActive() const
