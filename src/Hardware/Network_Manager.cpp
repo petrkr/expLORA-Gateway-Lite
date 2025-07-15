@@ -2,7 +2,7 @@
 /**
  * expLORA Gateway Lite
  *
- * LoRa module manager implementation file
+ * Network manager implementation file
  *
  * Copyright Pajenicko s.r.o., Igor Sverma (C) 2025
  *
@@ -37,7 +37,7 @@ NetworkManager::~NetworkManager()
 
 }
 
-// Initialize LoRa module
+// Initialize
 bool NetworkManager::init()
 {
     logger.info("Initializing Networking...");

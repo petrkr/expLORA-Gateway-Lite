@@ -2,7 +2,7 @@
 /**
  * expLORA Gateway Lite
  *
- * LoRa module manager header file
+ * Network manager header file
  *
  * Copyright Pajenicko s.r.o., Igor Sverma (C) 2025
  *
@@ -32,10 +32,7 @@
 #include "board_config.h"
 
 /**
- * Class for managing RFM95W LoRa module
- *
- * Handles initialization, configuration, and communication with RFM95W LoRa module.
- * Abstracts SPI communication and interrupt handling.
+ * Class for managing network connections
  */
 class NetworkManager
 {
